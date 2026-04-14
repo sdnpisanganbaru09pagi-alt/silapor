@@ -1,0 +1,1075 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiLaPor - Sistem Laporan Sekolah</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--primary:#1a5276;--primary-light:#2e86c1;--primary-pale:#eaf3fb;
+--success:#1e8449;--success-pale:#eafaf1;
+--warning:#b7770d;--warning-pale:#fef9e7;
+--danger:#922b21;--danger-pale:#fdedec;
+--neutral:#f4f6f9;--border:#e0e6ef;
+--text:#1a202c;--text-2:#4a5568;--text-3:#718096;
+--white:#ffffff;--radius:12px;--shadow:0 2px 12px rgba(0,0,0,0.08);
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f4f8;color:var(--text);min-height:100vh;font-size:15px;line-height:1.6}
+.app{display:flex;flex-direction:column;min-height:100vh}
+
+/* NAV */
+.nav{background:var(--primary);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+.nav-brand{display:flex;align-items:center;gap:10px;color:#fff;font-family:'Sora',sans-serif;font-size:18px;font-weight:600}
+.nav-brand span{background:#e67e22;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
+.nav-tabs{display:flex;gap:4px}
+.nav-tab{background:transparent;border:none;color:rgba(255,255,255,0.7);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:500;transition:all .2s}
+.nav-tab:hover,.nav-tab.active{background:rgba(255,255,255,0.15);color:#fff}
+.nav-user{color:rgba(255,255,255,0.9);font-size:13px;display:flex;align-items:center;gap:8px}
+.nav-logout{background:rgba(255,255,255,0.15);border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif}
+
+/* PAGES */
+.page{display:none;padding:24px;max-width:960px;margin:0 auto;width:100%}
+.page.active{display:block}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-light) 100%);border-radius:16px;padding:32px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;right:-40px;top:-40px;width:200px;height:200px;background:rgba(255,255,255,0.05);border-radius:50%}
+.hero-title{font-family:'Sora',sans-serif;font-size:22px;font-weight:600;margin-bottom:6px}
+.hero-sub{opacity:0.85;font-size:14px}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:12px;margin-top:12px}
+
+/* CARDS */
+.card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:20px;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:4px;height:18px;background:var(--primary);border-radius:2px;display:inline-block}
+
+/* FORM */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.form-row.full{grid-template-columns:1fr}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.form-group label{font-size:13px;font-weight:600;color:var(--text-2)}
+.form-group label span{color:#e74c3c;margin-left:2px}
+input,select,textarea{border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);background:var(--white);transition:border .2s;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(46,134,193,0.12)}
+textarea{resize:vertical;min-height:100px}
+.search-select{position:relative}
+.search-select input{border-radius:8px 8px 0 0}
+.dropdown-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--primary-light);border-top:none;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:50;display:none}
+.dropdown-item{padding:9px 14px;cursor:pointer;font-size:13px;transition:background .15s;border-bottom:1px solid var(--border)}
+.dropdown-item:hover{background:var(--primary-pale)}
+.dropdown-list.show{display:block}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-light);transform:translateY(-1px)}
+.btn-success{background:var(--success);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-outline{background:transparent;color:var(--primary);border:1px solid var(--primary)}
+.btn-outline:hover{background:var(--primary-pale)}
+.btn-sm{padding:6px 14px;font-size:13px}
+.btn-full{width:100%;justify-content:center}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.badge-new{background:#e8f4fd;color:#1a5276}
+.badge-process{background:#fef3cd;color:#8a6400}
+.badge-done{background:#d5f5e3;color:#1e8449}
+.badge-admin{background:#fde8f5;color:#7d3c98}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:16px;text-align:center}
+.stat-num{font-size:28px;font-weight:700;color:var(--primary);font-family:'Sora',sans-serif}
+.stat-label{font-size:12px;color:var(--text-3);margin-top:4px}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--neutral);padding:10px 14px;text-align:left;font-weight:600;color:var(--text-2);font-size:12px;text-transform:uppercase;letter-spacing:0.5px}
+td{padding:12px 14px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:#fafbfe}
+
+/* CAPTCHA */
+.captcha-box{background:var(--neutral);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;align-items:center;gap:16px;margin-bottom:16px}
+.captcha-check{width:20px;height:20px;border:2px solid var(--border);border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.captcha-check.checked{background:var(--success);border-color:var(--success);color:#fff}
+.captcha-math{background:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 16px;font-size:15px;font-weight:600;color:var(--text);letter-spacing:2px;font-family:'Sora',sans-serif}
+.captcha-input{flex:1;max-width:80px}
+
+/* PHOTO */
+.photo-area{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--neutral)}
+.photo-area:hover{border-color:var(--primary-light);background:var(--primary-pale)}
+.photo-preview{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.photo-thumb{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid var(--border)}
+
+/* LOGIN */
+.login-wrap{max-width:420px;margin:60px auto}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo h2{font-family:'Sora',sans-serif;font-size:24px;color:var(--primary);font-weight:700}
+.login-logo p{color:var(--text-3);font-size:14px}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;display:none}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-title{font-size:16px;font-weight:700;color:var(--text)}
+.modal-close{background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-3);line-height:1}
+
+/* ALERT */
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px}
+.alert-success{background:var(--success-pale);color:var(--success);border:1px solid #a9dfbf}
+.alert-warning{background:var(--warning-pale);color:var(--warning);border:1px solid #f9e79f}
+.alert-danger{background:var(--danger-pale);color:var(--danger);border:1px solid #f1948a}
+.alert-info{background:var(--primary-pale);color:var(--primary);border:1px solid #aed6f1}
+.alert-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+
+/* STATUS CHIP */
+.status-sel{display:inline-flex;gap:6px;flex-wrap:wrap}
+.status-btn{padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;background:#fff;font-weight:500}
+.status-btn.sel-new{border-color:#1a5276;background:#e8f4fd;color:#1a5276}
+.status-btn.sel-process{border-color:#8a6400;background:#fef3cd;color:#8a6400}
+.status-btn.sel-done{border-color:#1e8449;background:#d5f5e3;color:#1e8449}
+
+/* TICKET */
+.ticket{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;transition:box-shadow .2s}
+.ticket:hover{box-shadow:var(--shadow)}
+.ticket-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.ticket-id{font-size:12px;color:var(--text-3);font-family:'Sora',sans-serif}
+.ticket-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.ticket-meta{font-size:12px;color:var(--text-3);display:flex;gap:12px;flex-wrap:wrap}
+.ticket-body{font-size:13px;color:var(--text-2);margin:8px 0;line-height:1.6;border-left:3px solid var(--primary-pale);padding-left:10px}
+
+/* SEARCH BAR */
+.search-bar{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+.search-bar input{flex:1;min-width:180px}
+.filter-chip{padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;cursor:pointer;background:#fff;transition:all .2s;font-family:'Plus Jakarta Sans',sans-serif}
+.filter-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* STEPS */
+.steps{display:flex;gap:0;margin-bottom:24px;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.step{flex:1;padding:12px;text-align:center;background:#fff;font-size:13px;font-weight:500;color:var(--text-3);position:relative;border-right:1px solid var(--border)}
+.step:last-child{border-right:none}
+.step.done{background:var(--success-pale);color:var(--success)}
+.step.active{background:var(--primary-pale);color:var(--primary);font-weight:600}
+.step-num{display:block;font-size:11px;margin-bottom:2px;opacity:0.7}
+
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:10px 20px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-3);border-bottom:2px solid transparent;transition:all .2s}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+
+/* RESPONSIVE */
+@media(max-width:600px){
+.stats-grid{grid-template-columns:repeat(2,1fr)}
+.form-row{grid-template-columns:1fr}
+.nav-tabs{display:none}
+}
+
+.divider{height:1px;background:var(--border);margin:16px 0}
+.text-sm{font-size:13px;color:var(--text-3)}
+.text-center{text-align:center}
+.mt-8{margin-top:8px}
+.mt-16{margin-top:16px}
+.flex{display:flex}.gap-8{gap:8px}.gap-16{gap:16px}
+.items-center{align-items:center}.justify-between{justify-content:space-between}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- NAV -->
+<nav class="nav" id="mainNav">
+  <div class="nav-brand">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><polyline points="9,22 9,12 15,12 15,22" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+    SiLaPor <span>BETA</span>
+  </div>
+  <div class="nav-tabs" id="navTabs">
+    <button class="nav-tab active" onclick="showPage('reporter')">Laporan</button>
+    <button class="nav-tab" onclick="showPage('school-login')">Login Sekolah</button>
+    <button class="nav-tab" onclick="showPage('admin-login')">Admin</button>
+  </div>
+  <div class="nav-user" id="navUser" style="display:none">
+    <span id="navUserName"></span>
+    <button class="nav-logout" onclick="logout()">Keluar</button>
+  </div>
+</nav>
+
+<!-- ==================== PAGE: PELAPOR ==================== -->
+<div class="page active" id="page-reporter">
+  <div class="hero">
+    <div class="hero-title">Laporkan Kondisi Lingkungan Sekolah</div>
+    <div class="hero-sub">Laporan Anda membantu sekolah menjadi lingkungan yang lebih baik. Identitas pelapor dijaga kerahasiaannya.</div>
+    <div class="hero-badge">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="rgba(255,255,255,0.9)"/></svg>
+      Aman & Terpercaya
+    </div>
+  </div>
+
+  <div id="reporterAlert"></div>
+
+  <div class="card">
+    <div class="card-title">Identitas Pelapor</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nama Pelapor <span>*</span></label>
+        <input type="text" id="r_name" placeholder="Nama lengkap Anda">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="r_email" placeholder="email@contoh.com">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Nomor WhatsApp <span>*</span></label>
+      <input type="text" id="r_wa" placeholder="08xxxxxxxxxx">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Detail Laporan</div>
+
+    <div class="form-group">
+      <label>Nama Sekolah <span>*</span></label>
+      <div class="search-select">
+        <input type="text" id="schoolSearch" placeholder="Ketik nama atau NPSN sekolah..." oninput="filterSchools()" onfocus="showDropdown()" autocomplete="off">
+        <div class="dropdown-list" id="schoolDropdown">
+        </div>
+      </div>
+      <input type="hidden" id="r_school_id">
+      <input type="hidden" id="r_school_name">
+    </div>
+
+    <div class="form-group">
+      <label>Topik Permasalahan <span>*</span></label>
+      <select id="r_topic">
+        <option value="">-- Pilih Topik --</option>
+        <option>Kebersihan Lingkungan</option>
+        <option>Kerusakan Fasilitas / Infrastruktur</option>
+        <option>Keamanan & Keselamatan</option>
+        <option>Sanitasi & Toilet</option>
+        <option>Taman & Ruang Hijau</option>
+        <option>Pencahayaan & Listrik</option>
+        <option>Drainase & Banjir</option>
+        <option>Perilaku Tidak Pantas</option>
+        <option>Lainnya</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Deskripsi Permasalahan <span>*</span></label>
+      <textarea id="r_desc" placeholder="Jelaskan kondisi yang Anda temukan secara detail. Semakin lengkap keterangan Anda, semakin cepat penanganan dilakukan..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Bukti Foto</label>
+      <div class="photo-area" onclick="triggerPhoto()">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style="margin:0 auto 8px"><rect x="3" y="8" width="18" height="13" rx="2" stroke="#718096" stroke-width="1.5"/><circle cx="12" cy="14" r="3" stroke="#718096" stroke-width="1.5"/><path d="M8 8V7a4 4 0 018 0v1" stroke="#718096" stroke-width="1.5"/></svg>
+        <div style="font-size:13px;color:var(--text-3)">Klik untuk memilih atau ambil foto</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:4px">Maks. 3 foto, format JPG/PNG/HEIF</div>
+      </div>
+      <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
+      <div class="photo-preview" id="photoPreview"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="captcha-box">
+      <div class="captcha-check" id="captchaCheck" onclick="verifyCaptcha()">
+        <svg id="captchaIcon" width="12" height="12" fill="none" style="display:none"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">Verifikasi: berapa hasil dari</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="captcha-math" id="captchaQ"></div>
+          <span style="font-size:13px;color:var(--text-2)">=</span>
+          <input type="number" class="captcha-input" id="captchaAns" placeholder="?" style="width:70px">
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--text-3)">reCAPTCHA</div>
+        <div style="font-size:10px;color:var(--text-3)">Privasi · Syarat</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-full" onclick="submitReport()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="22" y1="2" x2="11" y2="13" stroke="#fff" stroke-width="2"/><polygon points="22,2 15,22 11,13 2,9" stroke="#fff" stroke-width="2" fill="none"/></svg>
+      Kirim Laporan
+    </button>
+  </div>
+
+  <div class="card" style="background:var(--primary-pale);border-color:#aed6f1">
+    <div style="font-size:13px;font-weight:600;color:var(--primary);margin-bottom:8px">Cara Kerja Sistem</div>
+    <div class="steps">
+      <div class="step active"><span class="step-num">1</span>Laporan Masuk</div>
+      <div class="step"><span class="step-num">2</span>Diterima Sekolah</div>
+      <div class="step"><span class="step-num">3</span>Diproses</div>
+      <div class="step"><span class="step-num">4</span>Selesai</div>
+    </div>
+    <div style="font-size:12px;color:var(--text-2)">Anda akan mendapatkan nomor tiket setelah laporan berhasil dikirim. Simpan nomor tiket untuk melacak status laporan Anda.</div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: SCHOOL LOGIN ==================== -->
+<div class="page" id="page-school-login">
+  <div class="login-wrap">
+    <div class="login-logo">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style="margin:0 auto 12px;display:block"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#1a5276" stroke-width="1.5" fill="#eaf3fb"/></svg>
+      <h2>Portal Sekolah</h2>
+      <p>Masuk menggunakan NPSN dan password sekolah Anda</p>
+    </div>
+    <div class="card" style="padding:28px">
+      <div id="schoolLoginAlert"></div>
+      <div class="form-group">
+        <label>NPSN (Username)</label>
+        <input type="text" id="sl_npsn" placeholder="Contoh: 20400001">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="sl_pass" placeholder="Password Anda">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="schoolLogin()">Masuk</button>
+      <div class="divider"></div>
+      <div class="text-center text-sm">Lupa password? Hubungi administrator sistem</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: SCHOOL DASHBOARD ==================== -->
+<div class="page" id="page-school-dash">
+  <div class="hero" style="background:linear-gradient(135deg,#1e8449,#27ae60)">
+    <div class="hero-title">Dashboard Sekolah</div>
+    <div class="hero-sub" id="schoolDashName">Selamat datang</div>
+    <div class="hero-badge">
+      <svg width="12" height="12" fill="rgba(255,255,255,0.9)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+      <span id="schoolDashNPSN"></span>
+    </div>
+  </div>
+
+  <div id="firstLoginBanner" class="alert alert-warning hidden">
+    <div class="alert-icon">⚠️</div>
+    <div>
+      <strong>Login Pertama Terdeteksi</strong><br>
+      Demi keamanan akun, kami sarankan untuk segera mengganti password Anda.
+      <button class="btn btn-sm btn-outline" style="margin-top:8px" onclick="openChangePass()">Ganti Password Sekarang</button>
+    </div>
+  </div>
+
+  <div class="stats-grid" id="schoolStats">
+    <div class="stat-card"><div class="stat-num" id="sTotal">0</div><div class="stat-label">Total Laporan</div></div>
+    <div class="stat-card"><div class="stat-num" id="sNew" style="color:#1a5276">0</div><div class="stat-label">Laporan Baru</div></div>
+    <div class="stat-card"><div class="stat-num" id="sProc" style="color:#8a6400">0</div><div class="stat-label">Dalam Proses</div></div>
+    <div class="stat-card"><div class="stat-num" id="sDone" style="color:#1e8449">0</div><div class="stat-label">Selesai</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Daftar Laporan Masuk</div>
+    <div class="search-bar">
+      <input type="text" placeholder="Cari laporan..." id="schoolTicketSearch" oninput="renderSchoolTickets()" style="flex:1;min-width:150px">
+      <button class="filter-chip active" onclick="filterSchoolTickets('all',this)">Semua</button>
+      <button class="filter-chip" onclick="filterSchoolTickets('Baru',this)">Baru</button>
+      <button class="filter-chip" onclick="filterSchoolTickets('Dalam Proses',this)">Dalam Proses</button>
+      <button class="filter-chip" onclick="filterSchoolTickets('Selesai',this)">Selesai</button>
+    </div>
+    <div id="schoolTicketList"></div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: ADMIN LOGIN ==================== -->
+<div class="page" id="page-admin-login">
+  <div class="login-wrap">
+    <div class="login-logo">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style="margin:0 auto 12px;display:block"><circle cx="12" cy="8" r="4" stroke="#7d3c98" stroke-width="1.5" fill="#fde8f5"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#7d3c98" stroke-width="1.5" fill="none"/></svg>
+      <h2>Portal Administrator</h2>
+      <p>Masuk sebagai admin sistem SiLaPor</p>
+    </div>
+    <div class="card" style="padding:28px">
+      <div id="adminLoginAlert"></div>
+      <div class="form-group">
+        <label>Username Admin</label>
+        <input type="text" id="al_user" placeholder="admin">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="al_pass" placeholder="Password administrator">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="adminLogin()" style="background:#7d3c98">Masuk sebagai Admin</button>
+    </div>
+    <div class="text-center text-sm mt-8" style="color:var(--text-3);font-size:12px">Demo: username "admin" password "admin123"</div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: ADMIN DASHBOARD ==================== -->
+<div class="page" id="page-admin-dash">
+  <div class="hero" style="background:linear-gradient(135deg,#6c3483,#9b59b6)">
+    <div class="hero-title">Panel Administrator</div>
+    <div class="hero-sub">Kelola seluruh data sekolah dan monitoring laporan</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="adminTab('overview',this)">Ringkasan</div>
+    <div class="tab" onclick="adminTab('schools',this)">Data Sekolah</div>
+    <div class="tab" onclick="adminTab('reports',this)">Semua Laporan</div>
+    <div class="tab" onclick="adminTab('users',this)">User Sekolah</div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div id="admin-overview">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="aTotal">0</div><div class="stat-label">Total Laporan</div></div>
+      <div class="stat-card"><div class="stat-num" id="aNew" style="color:#1a5276">0</div><div class="stat-label">Baru</div></div>
+      <div class="stat-card"><div class="stat-num" id="aProc" style="color:#8a6400">0</div><div class="stat-label">Dalam Proses</div></div>
+      <div class="stat-card"><div class="stat-num" id="aDone" style="color:#1e8449">0</div><div class="stat-label">Selesai</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">10 Laporan Terbaru</div>
+      <div id="adminRecentList"></div>
+    </div>
+  </div>
+
+  <!-- SCHOOLS -->
+  <div id="admin-schools" class="hidden">
+    <div class="card">
+      <div class="card-title">Tambah Data Sekolah</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>NPSN <span>*</span></label>
+          <input type="text" id="a_npsn" placeholder="8 digit NPSN" maxlength="8">
+        </div>
+        <div class="form-group">
+          <label>Nama Sekolah <span>*</span></label>
+          <input type="text" id="a_sname" placeholder="Nama lengkap sekolah">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Jenjang</label>
+          <select id="a_level">
+            <option>SD</option><option>SMP</option><option>SMA</option><option>SMK</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Kota/Kabupaten</label>
+          <input type="text" id="a_city" placeholder="Kota">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password Awal Sekolah</label>
+        <input type="text" id="a_defpass" placeholder="Biarkan kosong untuk gunakan NPSN sebagai password">
+      </div>
+      <button class="btn btn-primary" onclick="addSchool()">+ Tambah Sekolah</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Daftar Sekolah Terdaftar</div>
+      <div class="search-bar">
+        <input type="text" id="schoolListSearch" placeholder="Cari sekolah..." oninput="renderSchoolTable()" style="flex:1">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>NPSN</th><th>Nama Sekolah</th><th>Jenjang</th><th>Kota</th><th>Laporan</th><th>Aksi</th></tr></thead>
+          <tbody id="schoolTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALL REPORTS -->
+  <div id="admin-reports" class="hidden">
+    <div class="card">
+      <div class="card-title">Semua Laporan Sistem</div>
+      <div class="search-bar">
+        <input type="text" id="adminReportSearch" placeholder="Cari berdasarkan sekolah, topik, pelapor..." oninput="renderAdminTickets()" style="flex:1;min-width:150px">
+        <button class="filter-chip active" onclick="filterAdminTickets('all',this)">Semua</button>
+        <button class="filter-chip" onclick="filterAdminTickets('Baru',this)">Baru</button>
+        <button class="filter-chip" onclick="filterAdminTickets('Dalam Proses',this)">Dalam Proses</button>
+        <button class="filter-chip" onclick="filterAdminTickets('Selesai',this)">Selesai</button>
+      </div>
+      <div id="adminAllTickets"></div>
+    </div>
+  </div>
+
+  <!-- USERS -->
+  <div id="admin-users" class="hidden">
+    <div class="card">
+      <div class="card-title">Kelola User Sekolah</div>
+      <div class="alert alert-info"><div class="alert-icon">ℹ️</div><div>User sekolah menggunakan NPSN sebagai username. Di sini Anda dapat mereset password mereka.</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>NPSN</th><th>Nama Sekolah</th><th>Login Pertama</th><th>Reset Password</th></tr></thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODALS ==================== -->
+
+<!-- Ticket Detail Modal -->
+<div class="modal-overlay" id="ticketModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTicketId">Detail Laporan</div>
+      <button class="modal-close" onclick="closeModal('ticketModal')">✕</button>
+    </div>
+    <div id="modalTicketContent"></div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="changePassModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Ganti Password</div>
+      <button class="modal-close" onclick="closeModal('changePassModal')">✕</button>
+    </div>
+    <div id="changePassAlert"></div>
+    <div class="form-group">
+      <label>Password Baru <span>*</span></label>
+      <input type="password" id="newPass1" placeholder="Minimal 6 karakter">
+    </div>
+    <div class="form-group">
+      <label>Konfirmasi Password <span>*</span></label>
+      <input type="password" id="newPass2" placeholder="Ulangi password baru">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveNewPassword()">Simpan Password Baru</button>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal-overlay" id="resetPassModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Reset Password Sekolah</div>
+      <button class="modal-close" onclick="closeModal('resetPassModal')">✕</button>
+    </div>
+    <div id="resetPassContent"></div>
+    <div class="form-group">
+      <label>Password Baru</label>
+      <input type="text" id="resetPassVal" placeholder="Kosongkan untuk gunakan NPSN sebagai password">
+    </div>
+    <button class="btn btn-danger btn-full" onclick="doResetPass()">Reset Password</button>
+  </div>
+</div>
+
+<input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
+
+</div>
+
+<script>
+// ====================== DATABASE (localStorage sim Google Drive) ======================
+const DB_KEY = 'silapor_db';
+
+function loadDB(){
+  try{
+    const d = localStorage.getItem(DB_KEY);
+    return d ? JSON.parse(d) : null;
+  }catch(e){return null}
+}
+
+function saveDB(db){
+  try{localStorage.setItem(DB_KEY, JSON.stringify(db))}catch(e){}
+}
+
+function initDB(){
+  let db = loadDB();
+  if(!db){
+    db = {
+      schools:[
+        {id:'20400001',name:'SDN 001 Jakarta Pusat',level:'SD',city:'Jakarta Pusat',password:'20400001',firstLogin:true},
+        {id:'20400002',name:'SMPN 5 Bandung',level:'SMP',city:'Bandung',password:'20400002',firstLogin:true},
+        {id:'20400003',name:'SMAN 3 Surabaya',level:'SMA',city:'Surabaya',password:'20400003',firstLogin:false},
+        {id:'20400004',name:'SMKN 2 Yogyakarta',level:'SMK',city:'Yogyakarta',password:'20400004',firstLogin:true},
+        {id:'20400005',name:'SDN Merdeka Malang',level:'SD',city:'Malang',password:'20400005',firstLogin:true},
+      ],
+      tickets:[
+        {id:'TKT-001',reporter:'Budi Santoso',email:'budi@gmail.com',wa:'081234567890',schoolId:'20400001',schoolName:'SDN 001 Jakarta Pusat',topic:'Kebersihan Lingkungan',desc:'Terdapat tumpukan sampah di halaman belakang sekolah yang sudah berhari-hari tidak dibersihkan. Baunya cukup mengganggu dan berpotensi menjadi sarang nyamuk.',photos:[],status:'Baru',date:'2025-01-10T08:30:00',notes:''},
+        {id:'TKT-002',reporter:'Siti Rahayu',email:'',wa:'082345678901',schoolId:'20400002',schoolName:'SMPN 5 Bandung',topic:'Kerusakan Fasilitas / Infrastruktur',desc:'Atap ruang kelas 7A bocor saat hujan. Sudah terjadi selama 2 minggu dan mengganggu proses belajar mengajar.',photos:[],status:'Dalam Proses',date:'2025-01-11T10:15:00',notes:'Sudah dikoordinasikan dengan bagian sarana prasarana untuk perbaikan.'},
+        {id:'TKT-003',reporter:'Ahmad Fauzi',email:'ahmad@email.com',wa:'083456789012',schoolId:'20400003',schoolName:'SMAN 3 Surabaya',topic:'Sanitasi & Toilet',desc:'Toilet siswa putra di lantai 2 sudah tidak berfungsi dengan baik, air tidak mengalir dan bau tidak sedap.',photos:[],status:'Selesai',date:'2025-01-09T14:00:00',notes:'Telah diperbaiki oleh teknisi pada tanggal 12 Januari 2025.'},
+        {id:'TKT-004',reporter:'Dewi Lestari',email:'',wa:'084567890123',schoolId:'20400001',schoolName:'SDN 001 Jakarta Pusat',topic:'Keamanan & Keselamatan',desc:'Pagar sekolah bagian barat ada yang sudah rapuh dan bisa membahayakan siswa.',photos:[],status:'Baru',date:'2025-01-12T09:00:00',notes:''},
+      ],
+      admin:{username:'admin',password:'admin123'}
+    };
+    saveDB(db);
+  }
+  return db;
+}
+
+let DB = initDB();
+let currentUser = null;
+let schoolTicketFilter = 'all';
+let adminTicketFilter = 'all';
+let captchaA = 0, captchaB = 0;
+let captchaVerified = false;
+let resetTargetNPSN = '';
+let photoFiles = [];
+
+// ====================== NAVIGATION ======================
+function showPage(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  const map = {'reporter':0,'school-login':1,'admin-login':2};
+  if(map[page]!==undefined) tabs[map[page]].classList.add('active');
+}
+
+function logout(){
+  currentUser = null;
+  document.getElementById('navUser').style.display='none';
+  document.getElementById('navTabs').style.display='flex';
+  showPage('reporter');
+}
+
+// ====================== CAPTCHA ======================
+function genCaptcha(){
+  captchaA = Math.floor(Math.random()*10)+1;
+  captchaB = Math.floor(Math.random()*10)+1;
+  document.getElementById('captchaQ').textContent = captchaA + ' + ' + captchaB;
+  document.getElementById('captchaAns').value = '';
+  captchaVerified = false;
+  const chk = document.getElementById('captchaCheck');
+  chk.classList.remove('checked');
+  document.getElementById('captchaIcon').style.display='none';
+}
+
+function verifyCaptcha(){
+  const ans = parseInt(document.getElementById('captchaAns').value);
+  if(ans === captchaA + captchaB){
+    captchaVerified = true;
+    const chk = document.getElementById('captchaCheck');
+    chk.classList.add('checked');
+    document.getElementById('captchaIcon').style.display='block';
+  } else {
+    showAlert('reporterAlert','danger','Jawaban verifikasi salah. Silakan coba lagi.');
+    genCaptcha();
+  }
+}
+
+// ====================== SCHOOL SEARCH DROPDOWN ======================
+function filterSchools(){
+  const q = document.getElementById('schoolSearch').value.toLowerCase();
+  const dd = document.getElementById('schoolDropdown');
+  DB = loadDB();
+  const matches = DB.schools.filter(s=>s.name.toLowerCase().includes(q)||s.id.includes(q));
+  dd.innerHTML = '';
+  if(matches.length===0){
+    dd.innerHTML='<div class="dropdown-item" style="color:var(--text-3)">Sekolah tidak ditemukan</div>';
+  } else {
+    matches.forEach(s=>{
+      const d=document.createElement('div');
+      d.className='dropdown-item';
+      d.innerHTML=`<strong>${s.name}</strong> <span style="color:var(--text-3);font-size:11px">NPSN: ${s.id} · ${s.level} · ${s.city}</span>`;
+      d.onclick=()=>{
+        document.getElementById('schoolSearch').value=s.name;
+        document.getElementById('r_school_id').value=s.id;
+        document.getElementById('r_school_name').value=s.name;
+        dd.classList.remove('show');
+      };
+      dd.appendChild(d);
+    });
+  }
+  dd.classList.add('show');
+}
+
+function showDropdown(){
+  filterSchools();
+}
+
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.search-select')) document.getElementById('schoolDropdown').classList.remove('show');
+});
+
+// ====================== PHOTO UPLOAD ======================
+function triggerPhoto(){
+  document.getElementById('photoInput').click();
+}
+
+function handlePhotos(inp){
+  const files = Array.from(inp.files).slice(0,3);
+  photoFiles = files;
+  const prev = document.getElementById('photoPreview');
+  prev.innerHTML='';
+  files.forEach(f=>{
+    const reader = new FileReader();
+    reader.onload=e=>{
+      const img = document.createElement('img');
+      img.className='photo-thumb';
+      img.src=e.target.result;
+      prev.appendChild(img);
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+// ====================== SUBMIT REPORT ======================
+function submitReport(){
+  const name = document.getElementById('r_name').value.trim();
+  const wa = document.getElementById('r_wa').value.trim();
+  const schoolId = document.getElementById('r_school_id').value;
+  const schoolName = document.getElementById('r_school_name').value;
+  const topic = document.getElementById('r_topic').value;
+  const desc = document.getElementById('r_desc').value.trim();
+
+  if(!name){return showAlert('reporterAlert','danger','Nama pelapor wajib diisi.')}
+  if(!wa){return showAlert('reporterAlert','danger','Nomor WhatsApp wajib diisi.')}
+  if(!schoolId){return showAlert('reporterAlert','danger','Pilih sekolah dari dropdown.')}
+  if(!topic){return showAlert('reporterAlert','danger','Pilih topik permasalahan.')}
+  if(desc.length<20){return showAlert('reporterAlert','danger','Deskripsi permasalahan minimal 20 karakter.')}
+  if(!captchaVerified){return showAlert('reporterAlert','danger','Harap selesaikan verifikasi CAPTCHA terlebih dahulu.')}
+
+  DB = loadDB();
+  const id = 'TKT-' + String(DB.tickets.length+1).padStart(3,'0');
+  const ticket = {
+    id, reporter:name, email:document.getElementById('r_email').value.trim(),
+    wa, schoolId, schoolName, topic, desc, photos:[], status:'Baru',
+    date:new Date().toISOString(), notes:''
+  };
+  DB.tickets.push(ticket);
+  saveDB(DB);
+
+  document.getElementById('r_name').value='';
+  document.getElementById('r_email').value='';
+  document.getElementById('r_wa').value='';
+  document.getElementById('schoolSearch').value='';
+  document.getElementById('r_school_id').value='';
+  document.getElementById('r_school_name').value='';
+  document.getElementById('r_topic').value='';
+  document.getElementById('r_desc').value='';
+  document.getElementById('photoPreview').innerHTML='';
+  photoFiles=[];
+  genCaptcha();
+  captchaVerified=false;
+
+  showAlert('reporterAlert','success',`✅ Laporan berhasil dikirim! Nomor Tiket Anda: <strong>${id}</strong>. Simpan nomor ini untuk tracking laporan.`);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ====================== SCHOOL LOGIN ======================
+function schoolLogin(){
+  const npsn = document.getElementById('sl_npsn').value.trim();
+  const pass = document.getElementById('sl_pass').value;
+  DB = loadDB();
+  const school = DB.schools.find(s=>s.id===npsn && s.password===pass);
+  if(!school){
+    return showAlert('schoolLoginAlert','danger','NPSN atau password salah. Coba lagi atau hubungi administrator.');
+  }
+  currentUser = {type:'school', school};
+  document.getElementById('navTabs').style.display='none';
+  document.getElementById('navUser').style.display='flex';
+  document.getElementById('navUserName').textContent = school.name;
+  showPage('school-dash');
+  document.getElementById('schoolDashName').textContent = school.name;
+  document.getElementById('schoolDashNPSN').textContent = 'NPSN: ' + school.id;
+  if(school.firstLogin){
+    document.getElementById('firstLoginBanner').classList.remove('hidden');
+  } else {
+    document.getElementById('firstLoginBanner').classList.add('hidden');
+  }
+  schoolTicketFilter='all';
+  renderSchoolTickets();
+  updateSchoolStats();
+}
+
+function updateSchoolStats(){
+  if(!currentUser||currentUser.type!=='school') return;
+  DB=loadDB();
+  const tickets=DB.tickets.filter(t=>t.schoolId===currentUser.school.id);
+  document.getElementById('sTotal').textContent=tickets.length;
+  document.getElementById('sNew').textContent=tickets.filter(t=>t.status==='Baru').length;
+  document.getElementById('sProc').textContent=tickets.filter(t=>t.status==='Dalam Proses').length;
+  document.getElementById('sDone').textContent=tickets.filter(t=>t.status==='Selesai').length;
+}
+
+function renderSchoolTickets(){
+  if(!currentUser||currentUser.type!=='school') return;
+  DB=loadDB();
+  const q=(document.getElementById('schoolTicketSearch').value||'').toLowerCase();
+  let tickets=DB.tickets.filter(t=>t.schoolId===currentUser.school.id);
+  if(schoolTicketFilter!=='all') tickets=tickets.filter(t=>t.status===schoolTicketFilter);
+  if(q) tickets=tickets.filter(t=>t.desc.toLowerCase().includes(q)||t.topic.toLowerCase().includes(q)||t.reporter.toLowerCase().includes(q));
+  tickets.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const el=document.getElementById('schoolTicketList');
+  if(tickets.length===0){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--text-3)">Tidak ada laporan ditemukan</div>';return}
+  el.innerHTML=tickets.map(t=>ticketCard(t,true)).join('');
+}
+
+function filterSchoolTickets(status,btn){
+  schoolTicketFilter=status;
+  document.querySelectorAll('#page-school-dash .filter-chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSchoolTickets();
+}
+
+// ====================== ADMIN LOGIN ======================
+function adminLogin(){
+  const user=document.getElementById('al_user').value.trim();
+  const pass=document.getElementById('al_pass').value;
+  DB=loadDB();
+  if(user===DB.admin.username && pass===DB.admin.password){
+    currentUser={type:'admin'};
+    document.getElementById('navTabs').style.display='none';
+    document.getElementById('navUser').style.display='flex';
+    document.getElementById('navUserName').textContent='Administrator';
+    showPage('admin-dash');
+    updateAdminStats();
+    renderAdminRecent();
+  } else {
+    showAlert('adminLoginAlert','danger','Username atau password admin salah.');
+  }
+}
+
+function adminTab(tab,btn){
+  ['overview','schools','reports','users'].forEach(t=>{
+    document.getElementById('admin-'+t).classList.add('hidden');
+  });
+  document.querySelectorAll('#page-admin-dash .tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('admin-'+tab).classList.remove('hidden');
+  btn.classList.add('active');
+  if(tab==='schools') renderSchoolTable();
+  if(tab==='reports') renderAdminTickets();
+  if(tab==='users') renderUserTable();
+}
+
+function updateAdminStats(){
+  DB=loadDB();
+  document.getElementById('aTotal').textContent=DB.tickets.length;
+  document.getElementById('aNew').textContent=DB.tickets.filter(t=>t.status==='Baru').length;
+  document.getElementById('aProc').textContent=DB.tickets.filter(t=>t.status==='Dalam Proses').length;
+  document.getElementById('aDone').textContent=DB.tickets.filter(t=>t.status==='Selesai').length;
+}
+
+function renderAdminRecent(){
+  DB=loadDB();
+  const tickets=[...DB.tickets].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
+  document.getElementById('adminRecentList').innerHTML=tickets.map(t=>ticketCard(t,false)).join('') || '<div style="text-align:center;padding:32px;color:var(--text-3)">Belum ada laporan</div>';
+}
+
+function renderSchoolTable(){
+  DB=loadDB();
+  const q=(document.getElementById('schoolListSearch').value||'').toLowerCase();
+  const schools=DB.schools.filter(s=>s.name.toLowerCase().includes(q)||s.id.includes(q));
+  document.getElementById('schoolTableBody').innerHTML=schools.map(s=>{
+    const cnt=DB.tickets.filter(t=>t.schoolId===s.id).length;
+    return `<tr>
+      <td><code style="background:var(--neutral);padding:2px 6px;border-radius:4px;font-size:12px">${s.id}</code></td>
+      <td><strong>${s.name}</strong></td>
+      <td><span class="badge badge-new">${s.level}</span></td>
+      <td>${s.city}</td>
+      <td>${cnt}</td>
+      <td><button class="btn btn-sm btn-outline" onclick="openResetPass('${s.id}','${s.name.replace(/'/g,'\\\'')}')" style="font-size:12px">Reset Pass</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAdminTickets(){
+  DB=loadDB();
+  const q=(document.getElementById('adminReportSearch').value||'').toLowerCase();
+  let tickets=[...DB.tickets];
+  if(adminTicketFilter!=='all') tickets=tickets.filter(t=>t.status===adminTicketFilter);
+  if(q) tickets=tickets.filter(t=>t.schoolName.toLowerCase().includes(q)||t.topic.toLowerCase().includes(q)||t.reporter.toLowerCase().includes(q)||t.id.toLowerCase().includes(q));
+  tickets.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  document.getElementById('adminAllTickets').innerHTML=tickets.map(t=>ticketCard(t,false)).join('') || '<div style="text-align:center;padding:32px;color:var(--text-3)">Tidak ada laporan</div>';
+}
+
+function filterAdminTickets(status,btn){
+  adminTicketFilter=status;
+  document.querySelectorAll('#admin-reports .filter-chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAdminTickets();
+}
+
+function renderUserTable(){
+  DB=loadDB();
+  document.getElementById('userTableBody').innerHTML=DB.schools.map(s=>`
+    <tr>
+      <td><code style="background:var(--neutral);padding:2px 6px;border-radius:4px;font-size:12px">${s.id}</code></td>
+      <td>${s.name}</td>
+      <td>${s.firstLogin?'<span class="badge badge-new">Belum Login</span>':'<span class="badge badge-done">Sudah Login</span>'}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="openResetPass('${s.id}','${s.name.replace(/'/g,'\\\'')}')" style="font-size:12px">Reset Password</button></td>
+    </tr>
+  `).join('');
+}
+
+function addSchool(){
+  const npsn=document.getElementById('a_npsn').value.trim();
+  const name=document.getElementById('a_sname').value.trim();
+  const level=document.getElementById('a_level').value;
+  const city=document.getElementById('a_city').value.trim();
+  const defpass=document.getElementById('a_defpass').value.trim();
+  if(!npsn||npsn.length!==8||isNaN(npsn)){return alert('NPSN harus 8 digit angka')}
+  if(!name){return alert('Nama sekolah wajib diisi')}
+  DB=loadDB();
+  if(DB.schools.find(s=>s.id===npsn)){return alert('NPSN sudah terdaftar')}
+  DB.schools.push({id:npsn,name,level,city,password:defpass||npsn,firstLogin:true});
+  saveDB(DB);
+  document.getElementById('a_npsn').value='';
+  document.getElementById('a_sname').value='';
+  document.getElementById('a_city').value='';
+  document.getElementById('a_defpass').value='';
+  renderSchoolTable();
+  alert('Sekolah berhasil ditambahkan! NPSN: '+npsn);
+}
+
+// ====================== TICKET CARD ======================
+function ticketCard(t, isSchool){
+  const statusClass = t.status==='Baru'?'badge-new':t.status==='Dalam Proses'?'badge-process':'badge-done';
+  const date = new Date(t.date).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  return `<div class="ticket">
+    <div class="ticket-head">
+      <div>
+        <div class="ticket-id">${t.id} · ${date}</div>
+        <div class="ticket-title">${t.topic}</div>
+      </div>
+      <span class="badge ${statusClass}">${t.status}</span>
+    </div>
+    <div class="ticket-body">${t.desc.substring(0,120)}${t.desc.length>120?'...':''}</div>
+    <div class="ticket-meta">
+      <span>👤 ${t.reporter}</span>
+      ${t.wa?`<span>📱 ${t.wa}</span>`:''}
+      ${!isSchool?`<span>🏫 ${t.schoolName}</span>`:''}
+    </div>
+    ${t.notes?`<div style="margin-top:8px;font-size:12px;background:var(--success-pale);padding:6px 10px;border-radius:6px;color:var(--success)">📋 ${t.notes}</div>`:''}
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-sm btn-outline" onclick="openTicket('${t.id}',${isSchool})">Lihat Detail</button>
+      ${isSchool?`
+        <button class="btn btn-sm" style="background:var(--warning-pale);color:var(--warning);border:1px solid #f9e79f" onclick="updateStatus('${t.id}','Dalam Proses')">Proses</button>
+        <button class="btn btn-sm" style="background:var(--success-pale);color:var(--success);border:1px solid #a9dfbf" onclick="updateStatus('${t.id}','Selesai')">Selesai</button>
+      `:''}
+    </div>
+  </div>`;
+}
+
+function openTicket(id, isSchool){
+  DB=loadDB();
+  const t=DB.tickets.find(x=>x.id===id);
+  if(!t) return;
+  const date=new Date(t.date).toLocaleString('id-ID',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const statusClass=t.status==='Baru'?'badge-new':t.status==='Dalam Proses'?'badge-process':'badge-done';
+  document.getElementById('modalTicketId').textContent='Detail Laporan — '+t.id;
+  document.getElementById('modalTicketContent').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span class="badge ${statusClass}" style="font-size:13px;padding:5px 14px">${t.status}</span>
+      <span style="font-size:12px;color:var(--text-3)">${date}</span>
+    </div>
+    <div style="background:var(--neutral);border-radius:8px;padding:12px 16px;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Topik</div>
+      <div style="font-weight:600">${t.topic}</div>
+    </div>
+    <div style="background:var(--neutral);border-radius:8px;padding:12px 16px;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Deskripsi Permasalahan</div>
+      <div style="line-height:1.7;font-size:14px">${t.desc}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="background:var(--neutral);border-radius:8px;padding:12px">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:3px">Pelapor</div>
+        <div style="font-weight:600;font-size:14px">${t.reporter}</div>
+        <div style="font-size:12px;color:var(--text-2)">${t.wa}</div>
+        ${t.email?`<div style="font-size:12px;color:var(--primary)">${t.email}</div>`:''}
+      </div>
+      <div style="background:var(--neutral);border-radius:8px;padding:12px">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:3px">Sekolah</div>
+        <div style="font-weight:600;font-size:14px">${t.schoolName}</div>
+        <div style="font-size:12px;color:var(--text-2)">NPSN: ${t.schoolId}</div>
+      </div>
+    </div>
+    ${isSchool?`
+    <div style="border-top:1px solid var(--border);padding-top:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">Catatan Tindak Lanjut</div>
+      <textarea id="ticketNotes" placeholder="Tuliskan langkah tindak lanjut yang telah dilakukan..." style="margin-bottom:12px;min-height:80px">${t.notes}</textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:var(--warning-pale);color:var(--warning);border:1px solid #f9e79f" onclick="updateStatusModal('${t.id}','Dalam Proses')">Tandai: Dalam Proses</button>
+        <button class="btn btn-sm" style="background:var(--success-pale);color:var(--success);border:1px solid #a9dfbf" onclick="updateStatusModal('${t.id}','Selesai')">Tandai: Selesai</button>
+      </div>
+    </div>`:''}
+  `;
+  openModal('ticketModal');
+}
+
+function updateStatus(id,status){
+  DB=loadDB();
+  const t=DB.tickets.find(x=>x.id===id);
+  if(t){t.status=status;saveDB(DB);}
+  renderSchoolTickets();
+  updateSchoolStats();
+}
+
+function updateStatusModal(id,status){
+  const notes=document.getElementById('ticketNotes').value.trim();
+  DB=loadDB();
+  const t=DB.tickets.find(x=>x.id===id);
+  if(t){t.status=status;t.notes=notes;saveDB(DB);}
+  closeModal('ticketModal');
+  renderSchoolTickets();
+  updateSchoolStats();
+}
+
+// ====================== CHANGE PASSWORD ======================
+function openChangePass(){
+  document.getElementById('changePassAlert').innerHTML='';
+  document.getElementById('newPass1').value='';
+  document.getElementById('newPass2').value='';
+  openModal('changePassModal');
+}
+
+function saveNewPassword(){
+  const p1=document.getElementById('newPass1').value;
+  const p2=document.getElementById('newPass2').value;
+  if(p1.length<6){return showAlert('changePassAlert','danger','Password minimal 6 karakter.')}
+  if(p1!==p2){return showAlert('changePassAlert','danger','Konfirmasi password tidak cocok.')}
+  DB=loadDB();
+  const s=DB.schools.find(x=>x.id===currentUser.school.id);
+  if(s){s.password=p1;s.firstLogin=false;saveDB(DB);currentUser.school=s;}
+  document.getElementById('firstLoginBanner').classList.add('hidden');
+  closeModal('changePassModal');
+  alert('Password berhasil diperbarui!');
+}
+
+// ====================== RESET PASSWORD (ADMIN) ======================
+function openResetPass(npsn,name){
+  resetTargetNPSN=npsn;
+  document.getElementById('resetPassContent').innerHTML=`<div class="alert alert-warning"><div class="alert-icon">⚠️</div><div>Reset password untuk: <strong>${name}</strong> (NPSN: ${npsn})</div></div>`;
+  document.getElementById('resetPassVal').value='';
+  openModal('resetPassModal');
+}
+
+function doResetPass(){
+  const val=document.getElementById('resetPassVal').value.trim();
+  DB=loadDB();
+  const s=DB.schools.find(x=>x.id===resetTargetNPSN);
+  if(s){s.password=val||resetTargetNPSN;s.firstLogin=true;saveDB(DB);}
+  closeModal('resetPassModal');
+  renderUserTable();
+  alert('Password berhasil direset! Password baru: '+(val||resetTargetNPSN));
+}
+
+// ====================== MODAL HELPERS ======================
+function openModal(id){document.getElementById(id).classList.add('show')}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
+
+// Click outside modal to close
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')});
+});
+
+// ====================== ALERT ======================
+function showAlert(elId,type,msg){
+  const el=document.getElementById(elId);
+  if(!el) return;
+  el.innerHTML=`<div class="alert alert-${type}"><div class="alert-icon">${type==='success'?'✅':type==='danger'?'❌':'ℹ️'}</div><div>${msg}</div></div>`;
+  setTimeout(()=>{if(type!=='success')return; el.innerHTML=''},8000);
+}
+
+// ====================== INIT ======================
+genCaptcha();
+document.getElementById('captchaAns').addEventListener('keyup',function(e){
+  if(e.key==='Enter') verifyCaptcha();
+});
+</script>
+</body>
+</html>
