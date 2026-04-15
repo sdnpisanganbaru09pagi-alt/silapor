@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -5,6 +6,141 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SiLaPor - Sistem Laporan Sekolah</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, set, get, update, onValue, push, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  // ============================================================
+  // 🔧 GANTI KONFIGURASI FIREBASE DI BAWAH INI
+  // Buka: https://console.firebase.google.com → Project Settings → Web App
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyBK285KQJNJJvHQdTiXVY6B__jr6tWy_BE",
+    authDomain: "silapor-57339.firebaseapp.com",
+    databaseURL: "https://silapor-57339-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "silapor-57339",
+    storageBucket: "silapor-57339.firebasestorage.app",
+    messagingSenderId: "234883893986",
+    appId: "1:234883893986:web:7c580af095e67fbcd32cbb"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Expose ke global scope
+  window._firebaseDB = db;
+  window._fbRef = ref;
+  window._fbSet = set;
+  window._fbGet = get;
+  window._fbUpdate = update;
+  window._fbOnValue = onValue;
+  window._fbPush = push;
+  window._fbChild = child;
+
+  // Inisialisasi data awal jika belum ada
+  async function initFirebaseDB() {
+    showLoadingOverlay(true);
+    try {
+      const snapshot = await get(ref(db, '/'));
+      if (!snapshot.exists()) {
+        const initialData = {
+          schools: {
+            "20400001": {id:"20400001",name:"SDN 001 Jakarta Pusat",level:"SD",city:"Jakarta Pusat",password:"20400001",firstLogin:true},
+            "20400002": {id:"20400002",name:"SMPN 5 Bandung",level:"SMP",city:"Bandung",password:"20400002",firstLogin:true},
+            "20400003": {id:"20400003",name:"SMAN 3 Surabaya",level:"SMA",city:"Surabaya",password:"20400003",firstLogin:false},
+            "20400004": {id:"20400004",name:"SMKN 2 Yogyakarta",level:"SMK",city:"Yogyakarta",password:"20400004",firstLogin:true},
+            "20400005": {id:"20400005",name:"SDN Merdeka Malang",level:"SD",city:"Malang",password:"20400005",firstLogin:true},
+          },
+          tickets: {
+            "TKT-001": {id:"TKT-001",reporter:"Budi Santoso",email:"budi@gmail.com",wa:"081234567890",schoolId:"20400001",schoolName:"SDN 001 Jakarta Pusat",topic:"Kebersihan Lingkungan",desc:"Terdapat tumpukan sampah di halaman belakang sekolah yang sudah berhari-hari tidak dibersihkan.",photos:[],status:"Baru",date:"2025-01-10T08:30:00",notes:"",followUpPhotos:[]},
+            "TKT-002": {id:"TKT-002",reporter:"Siti Rahayu",email:"",wa:"082345678901",schoolId:"20400002",schoolName:"SMPN 5 Bandung",topic:"Kerusakan Fasilitas / Infrastruktur",desc:"Atap ruang kelas 7A bocor saat hujan. Sudah terjadi selama 2 minggu dan mengganggu proses belajar mengajar.",photos:[],status:"Dalam Proses",date:"2025-01-11T10:15:00",notes:"Sudah dikoordinasikan dengan bagian sarana prasarana.",followUpPhotos:[]},
+            "TKT-003": {id:"TKT-003",reporter:"Ahmad Fauzi",email:"ahmad@email.com",wa:"083456789012",schoolId:"20400003",schoolName:"SMAN 3 Surabaya",topic:"Sanitasi & Toilet",desc:"Toilet siswa putra di lantai 2 sudah tidak berfungsi dengan baik.",photos:[],status:"Selesai",date:"2025-01-09T14:00:00",notes:"Telah diperbaiki oleh teknisi pada tanggal 12 Januari 2025.",followUpPhotos:[]},
+            "TKT-004": {id:"TKT-004",reporter:"Dewi Lestari",email:"",wa:"084567890123",schoolId:"20400001",schoolName:"SDN 001 Jakarta Pusat",topic:"Keamanan & Keselamatan",desc:"Pagar sekolah bagian barat ada yang sudah rapuh dan bisa membahayakan siswa.",photos:[],status:"Baru",date:"2025-01-12T09:00:00",notes:"",followUpPhotos:[]},
+          },
+          admin: {username:"admin",password:"admin123"}
+        };
+        await set(ref(db, '/'), initialData);
+      }
+      // Load data ke memory
+      await reloadDB();
+    } catch(e) {
+      console.error('Firebase init error:', e);
+      showDBError();
+    }
+    showLoadingOverlay(false);
+  }
+
+  // Load seluruh DB ke cache lokal
+  window.reloadDB = async function() {
+    try {
+      const snap = await get(ref(db, '/'));
+      if (snap.exists()) {
+        const raw = snap.val();
+        // Normalisasi: konversi objek Firebase ke array
+        window.DB = {
+          schools: raw.schools ? Object.values(raw.schools) : [],
+          tickets: raw.tickets ? Object.values(raw.tickets).map(t=>({...t, photos:t.photos||[], followUpPhotos:t.followUpPhotos||[]})) : [],
+          admin: raw.admin || {username:'admin',password:'admin123'}
+        };
+      }
+    } catch(e) {
+      console.error('reloadDB error:', e);
+    }
+  };
+
+  // Simpan schools ke Firebase
+  window.fbSaveSchool = async function(school) {
+    await set(ref(db, 'schools/' + school.id), school);
+  };
+
+  // Simpan ticket ke Firebase
+  window.fbSaveTicket = async function(ticket) {
+    await set(ref(db, 'tickets/' + ticket.id), ticket);
+  };
+
+  // Update sebagian field ticket
+  window.fbUpdateTicket = async function(id, fields) {
+    await update(ref(db, 'tickets/' + id), fields);
+  };
+
+  // Update admin
+  window.fbSaveAdmin = async function(adminObj) {
+    await set(ref(db, 'admin'), adminObj);
+  };
+
+  // Update school
+  window.fbUpdateSchool = async function(id, fields) {
+    await update(ref(db, 'schools/' + id), fields);
+  };
+
+  // Realtime listener untuk auto-refresh data
+  onValue(ref(db, '/'), async (snapshot) => {
+    if (snapshot.exists()) {
+      const raw = snapshot.val();
+      window.DB = {
+        schools: raw.schools ? Object.values(raw.schools) : [],
+        tickets: raw.tickets ? Object.values(raw.tickets).map(t=>({...t, photos:t.photos||[], followUpPhotos:t.followUpPhotos||[]})) : [],
+        admin: raw.admin || {username:'admin',password:'admin123'}
+      };
+      // Refresh tampilan jika sedang di halaman yang relevan
+      if (window.currentUser) {
+        if (window.currentUser.type === 'school') {
+          renderSchoolTickets && renderSchoolTickets();
+          updateSchoolStats && updateSchoolStats();
+        } else if (window.currentUser.type === 'admin') {
+          updateAdminStats && updateAdminStats();
+          renderAdminRecent && renderAdminRecent();
+        }
+      }
+    }
+  });
+
+  // Jalankan inisialisasi
+  window.addEventListener('DOMContentLoaded', () => {
+    initFirebaseDB();
+  });
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -230,10 +366,10 @@ tr:hover td{background:#fafbfe}
 
 <!-- Mobile Navigation Menu -->
 <div class="mobile-nav" id="mobileNav">
-  <button class="nav-tab active" onclick="showPage('reporter');toggleMobileNav()">Laporan</button>
-  <button class="nav-tab" onclick="showPage('tracking');toggleMobileNav()">Lacak Laporan</button>
-  <button class="nav-tab" onclick="showPage('school-login');toggleMobileNav()">Login Sekolah</button>
-  <button class="nav-tab" onclick="showPage('admin-login');toggleMobileNav()">Admin</button>
+  <button class="nav-tab active" onclick="showPage('reporter')">Laporan</button>
+  <button class="nav-tab" onclick="showPage('tracking')">Lacak Laporan</button>
+  <button class="nav-tab" onclick="showPage('school-login')">Login Sekolah</button>
+  <button class="nav-tab" onclick="showPage('admin-login')">Admin</button>
 </div>
 
 <!-- ==================== PAGE: PELAPOR ==================== -->
@@ -666,51 +802,46 @@ tr:hover td{background:#fafbfe}
 <input type="file" id="followUpPhotoInputCamera" accept="image/*" capture="environment" multiple style="display:none" onchange="handleFollowUpPhotos(this)">
 <input type="file" id="followUpPhotoInputGallery" accept="image/*" multiple style="display:none" onchange="handleFollowUpPhotos(this)">
 
+<!-- Loading Overlay -->
+<div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(255,255,255,0.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+  <div style="width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  <div style="font-size:14px;color:var(--text-2);font-weight:500">Menghubungkan ke database Firebase...</div>
+</div>
+<div id="dbErrorBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9998;background:#922b21;color:#fff;padding:10px 20px;font-size:13px;text-align:center">
+  ⚠️ Gagal terhubung ke Firebase. Pastikan konfigurasi Firebase sudah benar dan koneksi internet tersedia.
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
 </div>
 
 <script>
-// ====================== DATABASE (localStorage sim Google Drive) ======================
-const DB_KEY = 'silapor_db';
+// ====================== DATABASE (Firebase Realtime Database) ======================
+// DB adalah cache lokal yang di-sync dengan Firebase (diisi oleh module script di atas)
+if (!window.DB) window.DB = { schools:[], tickets:[], admin:{username:'admin',password:'admin123'} };
 
-function loadDB(){
-  try{
-    const d = localStorage.getItem(DB_KEY);
-    return d ? JSON.parse(d) : null;
-  }catch(e){return null}
+function showLoadingOverlay(show){
+  const el = document.getElementById('loadingOverlay');
+  if(el) el.style.display = show ? 'flex' : 'none';
 }
 
-function saveDB(db){
-  try{localStorage.setItem(DB_KEY, JSON.stringify(db))}catch(e){}
+function showDBError(){
+  const el = document.getElementById('dbErrorBanner');
+  if(el) el.style.display = 'block';
 }
 
-function initDB(){
-  let db = loadDB();
-  if(!db){
-    db = {
-      schools:[
-        {id:'20400001',name:'SDN 001 Jakarta Pusat',level:'SD',city:'Jakarta Pusat',password:'20400001',firstLogin:true},
-        {id:'20400002',name:'SMPN 5 Bandung',level:'SMP',city:'Bandung',password:'20400002',firstLogin:true},
-        {id:'20400003',name:'SMAN 3 Surabaya',level:'SMA',city:'Surabaya',password:'20400003',firstLogin:false},
-        {id:'20400004',name:'SMKN 2 Yogyakarta',level:'SMK',city:'Yogyakarta',password:'20400004',firstLogin:true},
-        {id:'20400005',name:'SDN Merdeka Malang',level:'SD',city:'Malang',password:'20400005',firstLogin:true},
-      ],
-      tickets:[
-        {id:'TKT-001',reporter:'Budi Santoso',email:'budi@gmail.com',wa:'081234567890',schoolId:'20400001',schoolName:'SDN 001 Jakarta Pusat',topic:'Kebersihan Lingkungan',desc:'Terdapat tumpukan sampah di halaman belakang sekolah yang sudah berhari-hari tidak dibersihkan. Baunya cukup mengganggu dan berpotensi menjadi sarang nyamuk.',photos:[],status:'Baru',date:'2025-01-10T08:30:00',notes:'',followUpPhotos:[]},
-        {id:'TKT-002',reporter:'Siti Rahayu',email:'',wa:'082345678901',schoolId:'20400002',schoolName:'SMPN 5 Bandung',topic:'Kerusakan Fasilitas / Infrastruktur',desc:'Atap ruang kelas 7A bocor saat hujan. Sudah terjadi selama 2 minggu dan mengganggu proses belajar mengajar.',photos:[],status:'Dalam Proses',date:'2025-01-11T10:15:00',notes:'Sudah dikoordinasikan dengan bagian sarana prasarana untuk perbaikan.',followUpPhotos:[]},
-        {id:'TKT-003',reporter:'Ahmad Fauzi',email:'ahmad@email.com',wa:'083456789012',schoolId:'20400003',schoolName:'SMAN 3 Surabaya',topic:'Sanitasi & Toilet',desc:'Toilet siswa putra di lantai 2 sudah tidak berfungsi dengan baik, air tidak mengalir dan bau tidak sedap.',photos:[],status:'Selesai',date:'2025-01-09T14:00:00',notes:'Telah diperbaiki oleh teknisi pada tanggal 12 Januari 2025.',followUpPhotos:[]},
-        {id:'TKT-004',reporter:'Dewi Lestari',email:'',wa:'084567890123',schoolId:'20400001',schoolName:'SDN 001 Jakarta Pusat',topic:'Keamanan & Keselamatan',desc:'Pagar sekolah bagian barat ada yang sudah rapuh dan bisa membahayakan siswa.',photos:[],status:'Baru',date:'2025-01-12T09:00:00',notes:'',followUpPhotos:[]},
-      ],
-      admin:{username:'admin',password:'admin123'}
-    };
-    saveDB(db);
-  }
-  return db;
+// Wrapper agar kode lama tetap berjalan (baca dari cache)
+function loadDB(){ return window.DB; }
+
+// saveDB sekarang async — simpan ke Firebase
+async function saveDB(db){
+  window.DB = db;
+  // Perubahan sudah ditangani per-operasi (fbSaveTicket, fbSaveSchool, fbSaveAdmin)
 }
 
-let DB = initDB();
-// Migration: ensure all tickets have followUpPhotos field
-DB.tickets.forEach(t=>{ if(!t.followUpPhotos) t.followUpPhotos=[]; });
-saveDB(DB);
+async function initDB(){
+  // Dipanggil oleh Firebase module script saat init selesai
+  return window.DB;
+}
 let currentUser = null;
 let schoolTicketFilter = 'all';
 let adminTicketFilter = 'all';
@@ -747,6 +878,9 @@ document.addEventListener('click', function(e){
 // ====================== NAVIGATION ======================
 const PROTECTED_PAGES = ['school-dash','admin-dash'];
 function showPage(page){
+  // Tutup mobile nav terlebih dahulu - pastikan selalu dijalankan
+  closeMobileNav();
+
   // Guard: block protected pages without login
   if(PROTECTED_PAGES.includes(page) && !currentUser){
     page = 'reporter';
@@ -764,8 +898,6 @@ function showPage(page){
     if(desktopTabs[publicMap[page]]) desktopTabs[publicMap[page]].classList.add('active');
     if(mobileTabs[publicMap[page]]) mobileTabs[publicMap[page]].classList.add('active');
   }
-
-  closeMobileNav();
 
   // Reset captcha state when leaving the reporter page
   if(page !== 'reporter'){
@@ -921,14 +1053,14 @@ function submitReport(){
     return Promise.all(promises);
   }
 
-  collectPhotos().then(photos => {
+  collectPhotos().then(async photos => {
     const ticket = {
       id, reporter:name, email:document.getElementById('r_email').value.trim(),
       wa, schoolId, schoolName, topic, desc, photos, status:'Baru',
       date:new Date().toISOString(), notes:'', followUpPhotos:[]
     };
     DB.tickets.push(ticket);
-    saveDB(DB);
+    if(window.fbSaveTicket) await window.fbSaveTicket(ticket);
 
     document.getElementById('r_name').value='';
     document.getElementById('r_email').value='';
@@ -1115,8 +1247,9 @@ function addSchool(){
   if(!name){return alert('Nama sekolah wajib diisi')}
   DB=loadDB();
   if(DB.schools.find(s=>s.id===npsn)){return alert('NPSN sudah terdaftar')}
-  DB.schools.push({id:npsn,name,level,city,password:defpass||npsn,firstLogin:true});
-  saveDB(DB);
+  const newSchool = {id:npsn,name,level,city,password:defpass||npsn,firstLogin:true};
+  DB.schools.push(newSchool);
+  if(window.fbSaveSchool) window.fbSaveSchool(newSchool);
   document.getElementById('a_npsn').value='';
   document.getElementById('a_sname').value='';
   document.getElementById('a_city').value='';
@@ -1243,7 +1376,10 @@ function openTicket(id, isSchool){
 function updateStatus(id,status){
   DB=loadDB();
   const t=DB.tickets.find(x=>x.id===id);
-  if(t){t.status=status;saveDB(DB);}
+  if(t){
+    t.status=status;
+    if(window.fbUpdateTicket) window.fbUpdateTicket(id, {status});
+  }
   renderSchoolTickets();
   updateSchoolStats();
 }
@@ -1256,10 +1392,13 @@ function updateStatusModal(id,status){
   const promises = followUpPhotoFiles.map(f=>new Promise(resolve=>{
     const r=new FileReader(); r.onload=e=>resolve(e.target.result); r.readAsDataURL(f);
   }));
-  Promise.all(promises).then(photos=>{
+  Promise.all(promises).then(async photos=>{
     DB=loadDB();
     const t=DB.tickets.find(x=>x.id===id);
-    if(t){t.status=status;t.notes=notes;t.followUpPhotos=photos;saveDB(DB);}
+    if(t){
+      t.status=status;t.notes=notes;t.followUpPhotos=photos;
+      if(window.fbUpdateTicket) await window.fbUpdateTicket(id, {status, notes, followUpPhotos:photos});
+    }
     followUpPhotoFiles=[];
     closeModal('ticketModal');
     renderSchoolTickets();
@@ -1282,7 +1421,11 @@ function saveNewPassword(){
   if(p1!==p2){return showAlert('changePassAlert','danger','Konfirmasi password tidak cocok.')}
   DB=loadDB();
   const s=DB.schools.find(x=>x.id===currentUser.school.id);
-  if(s){s.password=p1;s.firstLogin=false;saveDB(DB);currentUser.school=s;}
+  if(s){
+    s.password=p1;s.firstLogin=false;
+    if(window.fbUpdateSchool) window.fbUpdateSchool(s.id, {password:p1, firstLogin:false});
+    currentUser.school=s;
+  }
   document.getElementById('firstLoginBanner').classList.add('hidden');
   closeModal('changePassModal');
   alert('Password berhasil diperbarui!');
@@ -1300,7 +1443,10 @@ function doResetPass(){
   const val=document.getElementById('resetPassVal').value.trim();
   DB=loadDB();
   const s=DB.schools.find(x=>x.id===resetTargetNPSN);
-  if(s){s.password=val||resetTargetNPSN;s.firstLogin=true;saveDB(DB);}
+  if(s){
+    s.password=val||resetTargetNPSN;s.firstLogin=true;
+    if(window.fbUpdateSchool) window.fbUpdateSchool(resetTargetNPSN, {password:val||resetTargetNPSN, firstLogin:true});
+  }
   closeModal('resetPassModal');
   renderUserTable();
   alert('Password berhasil direset! Password baru: '+(val||resetTargetNPSN));
@@ -1428,7 +1574,7 @@ function saveAdminPassword(){
   if(p1.length<8){return showAlert('adminChangePassAlert','danger','Password baru minimal 8 karakter.')}
   if(p1!==p2){return showAlert('adminChangePassAlert','danger','Konfirmasi password tidak cocok.')}
   DB.admin.password=p1;
-  saveDB(DB);
+  if(window.fbSaveAdmin) window.fbSaveAdmin(DB.admin);
   closeModal('adminChangePassModal');
   alert('✅ Password administrator berhasil diperbarui!');
 }
