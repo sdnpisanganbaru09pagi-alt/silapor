@@ -191,11 +191,13 @@ tr:hover td{background:#fafbfe}
   </div>
   <div class="nav-tabs" id="navTabs">
     <button class="nav-tab active" onclick="showPage('reporter')">Laporan</button>
+    <button class="nav-tab" onclick="showPage('tracking')">Lacak Laporan</button>
     <button class="nav-tab" onclick="showPage('school-login')">Login Sekolah</button>
     <button class="nav-tab" onclick="showPage('admin-login')">Admin</button>
   </div>
   <div class="nav-user" id="navUser" style="display:none">
     <span id="navUserName"></span>
+    <button class="nav-logout" id="btnAdminChangePass" style="display:none;background:rgba(255,255,255,0.15);border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:4px" onclick="openAdminChangePass()">Ganti Password</button>
     <button class="nav-logout" onclick="logout()">Keluar</button>
   </div>
 </nav>
@@ -237,7 +239,7 @@ tr:hover td{background:#fafbfe}
     <div class="form-group">
       <label>Nama Sekolah <span>*</span></label>
       <div class="search-select">
-        <input type="text" id="schoolSearch" placeholder="Ketik nama atau NPSN sekolah..." oninput="filterSchools()" onfocus="showDropdown()" autocomplete="off">
+        <input type="text" id="schoolSearch" placeholder="Ketik nama sekolah..." oninput="filterSchools()" onfocus="showDropdown()" autocomplete="off">
         <div class="dropdown-list" id="schoolDropdown">
         </div>
       </div>
@@ -268,12 +270,20 @@ tr:hover td{background:#fafbfe}
 
     <div class="form-group">
       <label>Bukti Foto</label>
-      <div class="photo-area" onclick="triggerPhoto()">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style="margin:0 auto 8px"><rect x="3" y="8" width="18" height="13" rx="2" stroke="#718096" stroke-width="1.5"/><circle cx="12" cy="14" r="3" stroke="#718096" stroke-width="1.5"/><path d="M8 8V7a4 4 0 018 0v1" stroke="#718096" stroke-width="1.5"/></svg>
-        <div style="font-size:13px;color:var(--text-3)">Klik untuk memilih atau ambil foto</div>
-        <div style="font-size:11px;color:var(--text-3);margin-top:4px">Maks. 3 foto, format JPG/PNG/HEIF</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button type="button" class="btn btn-outline" style="flex:1;justify-content:center;gap:8px" onclick="document.getElementById('photoInputCamera').click()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="8" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="14" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 8V7a4 4 0 018 0v1" stroke="currentColor" stroke-width="1.5"/></svg>
+          Ambil Foto
+        </button>
+        <button type="button" class="btn btn-outline" style="flex:1;justify-content:center;gap:8px" onclick="document.getElementById('photoInputGallery').click()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          Dari Galeri
+        </button>
       </div>
+      <input type="file" id="photoInputCamera" accept="image/*" capture="environment" multiple style="display:none" onchange="handlePhotos(this)">
+      <input type="file" id="photoInputGallery" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
       <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
+      <div style="font-size:11px;color:var(--text-3);text-align:center;margin-bottom:8px">Maks. 3 foto, format JPG/PNG/HEIF</div>
       <div class="photo-preview" id="photoPreview"></div>
     </div>
 
@@ -312,6 +322,25 @@ tr:hover td{background:#fafbfe}
       <div class="step"><span class="step-num">4</span>Selesai</div>
     </div>
     <div style="font-size:12px;color:var(--text-2)">Anda akan mendapatkan nomor tiket setelah laporan berhasil dikirim. Simpan nomor tiket untuk melacak status laporan Anda.</div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: TRACKING ==================== -->
+<div class="page" id="page-tracking">
+  <div class="hero" style="background:linear-gradient(135deg,#1a5276 0%,#2e86c1 100%)">
+    <div class="hero-title">🔍 Lacak Status Laporan</div>
+    <div class="hero-sub">Masukkan nomor tiket untuk melihat status dan perkembangan laporan Anda</div>
+  </div>
+  <div class="card" style="max-width:560px;margin:0 auto">
+    <div class="card-title">Cari Laporan</div>
+    <div class="form-group">
+      <label>Nomor Tiket <span>*</span></label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="trackInput" placeholder="Contoh: TKT-001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')trackReport()">
+        <button class="btn btn-primary" onclick="trackReport()">Cari</button>
+      </div>
+    </div>
+    <div id="trackResult"></div>
   </div>
 </div>
 
@@ -400,7 +429,9 @@ tr:hover td{background:#fafbfe}
       </div>
       <button class="btn btn-primary btn-full" onclick="adminLogin()" style="background:#7d3c98">Masuk sebagai Admin</button>
     </div>
-    <div class="text-center text-sm mt-8" style="color:var(--text-3);font-size:12px">Demo: username "admin" password "admin123"</div>
+    <div class="text-center text-sm mt-8">
+      <button class="btn btn-sm" style="background:none;border:none;color:var(--primary-light);font-size:12px;text-decoration:underline;cursor:pointer" onclick="openAdminForgotPass()">Lupa password? Kirim reset ke developer</button>
+    </div>
   </div>
 </div>
 
@@ -557,7 +588,51 @@ tr:hover td{background:#fafbfe}
   </div>
 </div>
 
+<!-- Admin Change Password Modal -->
+<div class="modal-overlay" id="adminChangePassModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🔐 Ganti Password Administrator</div>
+      <button class="modal-close" onclick="closeModal('adminChangePassModal')">✕</button>
+    </div>
+    <div id="adminChangePassAlert"></div>
+    <div class="form-group">
+      <label>Password Lama <span>*</span></label>
+      <input type="password" id="adminOldPass" placeholder="Password saat ini">
+    </div>
+    <div class="form-group">
+      <label>Password Baru <span>*</span></label>
+      <input type="password" id="adminNewPass1" placeholder="Minimal 8 karakter">
+    </div>
+    <div class="form-group">
+      <label>Konfirmasi Password Baru <span>*</span></label>
+      <input type="password" id="adminNewPass2" placeholder="Ulangi password baru">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveAdminPassword()">Simpan Password Baru</button>
+  </div>
+</div>
+
+<!-- Admin Forgot Password Modal -->
+<div class="modal-overlay" id="adminForgotPassModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📧 Lupa Password Admin</div>
+      <button class="modal-close" onclick="closeModal('adminForgotPassModal')">✕</button>
+    </div>
+    <div id="adminForgotAlert"></div>
+    <div class="alert alert-info"><div class="alert-icon">ℹ️</div><div>Link reset password akan dikirim ke email developer: <strong>twin.insani@gmail.com</strong></div></div>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:16px">Klik tombol di bawah untuk mengirim permintaan reset password. Developer akan membantu Anda memulihkan akses.</p>
+    <button class="btn btn-primary btn-full" onclick="sendAdminForgotPass()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="#fff" stroke-width="2"/><polyline points="22,6 12,13 2,6" stroke="#fff" stroke-width="2"/></svg>
+      Kirim Permintaan Reset ke Developer
+    </button>
+  </div>
+</div>
+
 <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
+<input type="file" id="followUpPhotoInput" accept="image/*" multiple style="display:none" onchange="handleFollowUpPhotos(this)">
+<input type="file" id="followUpPhotoInputCamera" accept="image/*" capture="environment" multiple style="display:none" onchange="handleFollowUpPhotos(this)">
+<input type="file" id="followUpPhotoInputGallery" accept="image/*" multiple style="display:none" onchange="handleFollowUpPhotos(this)">
 
 </div>
 
@@ -588,10 +663,10 @@ function initDB(){
         {id:'20400005',name:'SDN Merdeka Malang',level:'SD',city:'Malang',password:'20400005',firstLogin:true},
       ],
       tickets:[
-        {id:'TKT-001',reporter:'Budi Santoso',email:'budi@gmail.com',wa:'081234567890',schoolId:'20400001',schoolName:'SDN 001 Jakarta Pusat',topic:'Kebersihan Lingkungan',desc:'Terdapat tumpukan sampah di halaman belakang sekolah yang sudah berhari-hari tidak dibersihkan. Baunya cukup mengganggu dan berpotensi menjadi sarang nyamuk.',photos:[],status:'Baru',date:'2025-01-10T08:30:00',notes:''},
-        {id:'TKT-002',reporter:'Siti Rahayu',email:'',wa:'082345678901',schoolId:'20400002',schoolName:'SMPN 5 Bandung',topic:'Kerusakan Fasilitas / Infrastruktur',desc:'Atap ruang kelas 7A bocor saat hujan. Sudah terjadi selama 2 minggu dan mengganggu proses belajar mengajar.',photos:[],status:'Dalam Proses',date:'2025-01-11T10:15:00',notes:'Sudah dikoordinasikan dengan bagian sarana prasarana untuk perbaikan.'},
-        {id:'TKT-003',reporter:'Ahmad Fauzi',email:'ahmad@email.com',wa:'083456789012',schoolId:'20400003',schoolName:'SMAN 3 Surabaya',topic:'Sanitasi & Toilet',desc:'Toilet siswa putra di lantai 2 sudah tidak berfungsi dengan baik, air tidak mengalir dan bau tidak sedap.',photos:[],status:'Selesai',date:'2025-01-09T14:00:00',notes:'Telah diperbaiki oleh teknisi pada tanggal 12 Januari 2025.'},
-        {id:'TKT-004',reporter:'Dewi Lestari',email:'',wa:'084567890123',schoolId:'20400001',schoolName:'SDN 001 Jakarta Pusat',topic:'Keamanan & Keselamatan',desc:'Pagar sekolah bagian barat ada yang sudah rapuh dan bisa membahayakan siswa.',photos:[],status:'Baru',date:'2025-01-12T09:00:00',notes:''},
+        {id:'TKT-001',reporter:'Budi Santoso',email:'budi@gmail.com',wa:'081234567890',schoolId:'20400001',schoolName:'SDN 001 Jakarta Pusat',topic:'Kebersihan Lingkungan',desc:'Terdapat tumpukan sampah di halaman belakang sekolah yang sudah berhari-hari tidak dibersihkan. Baunya cukup mengganggu dan berpotensi menjadi sarang nyamuk.',photos:[],status:'Baru',date:'2025-01-10T08:30:00',notes:'',followUpPhotos:[]},
+        {id:'TKT-002',reporter:'Siti Rahayu',email:'',wa:'082345678901',schoolId:'20400002',schoolName:'SMPN 5 Bandung',topic:'Kerusakan Fasilitas / Infrastruktur',desc:'Atap ruang kelas 7A bocor saat hujan. Sudah terjadi selama 2 minggu dan mengganggu proses belajar mengajar.',photos:[],status:'Dalam Proses',date:'2025-01-11T10:15:00',notes:'Sudah dikoordinasikan dengan bagian sarana prasarana untuk perbaikan.',followUpPhotos:[]},
+        {id:'TKT-003',reporter:'Ahmad Fauzi',email:'ahmad@email.com',wa:'083456789012',schoolId:'20400003',schoolName:'SMAN 3 Surabaya',topic:'Sanitasi & Toilet',desc:'Toilet siswa putra di lantai 2 sudah tidak berfungsi dengan baik, air tidak mengalir dan bau tidak sedap.',photos:[],status:'Selesai',date:'2025-01-09T14:00:00',notes:'Telah diperbaiki oleh teknisi pada tanggal 12 Januari 2025.',followUpPhotos:[]},
+        {id:'TKT-004',reporter:'Dewi Lestari',email:'',wa:'084567890123',schoolId:'20400001',schoolName:'SDN 001 Jakarta Pusat',topic:'Keamanan & Keselamatan',desc:'Pagar sekolah bagian barat ada yang sudah rapuh dan bisa membahayakan siswa.',photos:[],status:'Baru',date:'2025-01-12T09:00:00',notes:'',followUpPhotos:[]},
       ],
       admin:{username:'admin',password:'admin123'}
     };
@@ -601,6 +676,9 @@ function initDB(){
 }
 
 let DB = initDB();
+// Migration: ensure all tickets have followUpPhotos field
+DB.tickets.forEach(t=>{ if(!t.followUpPhotos) t.followUpPhotos=[]; });
+saveDB(DB);
 let currentUser = null;
 let schoolTicketFilter = 'all';
 let adminTicketFilter = 'all';
@@ -608,6 +686,7 @@ let captchaA = 0, captchaB = 0;
 let captchaVerified = false;
 let resetTargetNPSN = '';
 let photoFiles = [];
+let followUpPhotoFiles = [];
 
 // ====================== NAVIGATION ======================
 function showPage(page){
@@ -615,7 +694,7 @@ function showPage(page){
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   const tabs = document.querySelectorAll('.nav-tab');
-  const map = {'reporter':0,'school-login':1,'admin-login':2};
+  const map = {'reporter':0,'tracking':1,'school-login':2,'admin-login':3};
   if(map[page]!==undefined) tabs[map[page]].classList.add('active');
 }
 
@@ -623,6 +702,7 @@ function logout(){
   currentUser = null;
   document.getElementById('navUser').style.display='none';
   document.getElementById('navTabs').style.display='flex';
+  document.getElementById('btnAdminChangePass').style.display='none';
   showPage('reporter');
 }
 
@@ -664,7 +744,7 @@ function filterSchools(){
     matches.forEach(s=>{
       const d=document.createElement('div');
       d.className='dropdown-item';
-      d.innerHTML=`<strong>${s.name}</strong> <span style="color:var(--text-3);font-size:11px">NPSN: ${s.id} · ${s.level} · ${s.city}</span>`;
+      d.innerHTML=`<strong>${s.name}</strong> <span style="color:var(--text-3);font-size:11px">${s.level} · ${s.city}</span>`;
       d.onclick=()=>{
         document.getElementById('schoolSearch').value=s.name;
         document.getElementById('r_school_id').value=s.id;
@@ -725,29 +805,42 @@ function submitReport(){
 
   DB = loadDB();
   const id = 'TKT-' + String(DB.tickets.length+1).padStart(3,'0');
-  const ticket = {
-    id, reporter:name, email:document.getElementById('r_email').value.trim(),
-    wa, schoolId, schoolName, topic, desc, photos:[], status:'Baru',
-    date:new Date().toISOString(), notes:''
-  };
-  DB.tickets.push(ticket);
-  saveDB(DB);
 
-  document.getElementById('r_name').value='';
-  document.getElementById('r_email').value='';
-  document.getElementById('r_wa').value='';
-  document.getElementById('schoolSearch').value='';
-  document.getElementById('r_school_id').value='';
-  document.getElementById('r_school_name').value='';
-  document.getElementById('r_topic').value='';
-  document.getElementById('r_desc').value='';
-  document.getElementById('photoPreview').innerHTML='';
-  photoFiles=[];
-  genCaptcha();
-  captchaVerified=false;
+  // Save photos as base64
+  async function collectPhotos(){
+    const promises = photoFiles.map(f => new Promise(resolve=>{
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result);
+      r.readAsDataURL(f);
+    }));
+    return Promise.all(promises);
+  }
 
-  showAlert('reporterAlert','success',`✅ Laporan berhasil dikirim! Nomor Tiket Anda: <strong>${id}</strong>. Simpan nomor ini untuk tracking laporan.`);
-  window.scrollTo({top:0,behavior:'smooth'});
+  collectPhotos().then(photos => {
+    const ticket = {
+      id, reporter:name, email:document.getElementById('r_email').value.trim(),
+      wa, schoolId, schoolName, topic, desc, photos, status:'Baru',
+      date:new Date().toISOString(), notes:'', followUpPhotos:[]
+    };
+    DB.tickets.push(ticket);
+    saveDB(DB);
+
+    document.getElementById('r_name').value='';
+    document.getElementById('r_email').value='';
+    document.getElementById('r_wa').value='';
+    document.getElementById('schoolSearch').value='';
+    document.getElementById('r_school_id').value='';
+    document.getElementById('r_school_name').value='';
+    document.getElementById('r_topic').value='';
+    document.getElementById('r_desc').value='';
+    document.getElementById('photoPreview').innerHTML='';
+    photoFiles=[];
+    genCaptcha();
+    captchaVerified=false;
+
+    showAlert('reporterAlert','success',`✅ Laporan berhasil dikirim! Nomor Tiket Anda: <strong>${id}</strong>. Simpan nomor ini untuk tracking laporan.`);
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
 }
 
 // ====================== SCHOOL LOGIN ======================
@@ -816,6 +909,7 @@ function adminLogin(){
     document.getElementById('navTabs').style.display='none';
     document.getElementById('navUser').style.display='flex';
     document.getElementById('navUserName').textContent='Administrator';
+    document.getElementById('btnAdminChangePass').style.display='inline-block';
     showPage('admin-dash');
     updateAdminStats();
     renderAdminRecent();
@@ -951,6 +1045,23 @@ function openTicket(id, isSchool){
   if(!t) return;
   const date=new Date(t.date).toLocaleString('id-ID',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const statusClass=t.status==='Baru'?'badge-new':t.status==='Dalam Proses'?'badge-process':'badge-done';
+
+  const photosHTML = t.photos && t.photos.length>0 ? `
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:8px;font-weight:600">📷 Foto Laporan</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        ${t.photos.map(p=>`<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open(this.src,'_blank')">`).join('')}
+      </div>
+    </div>` : '';
+
+  const followUpPhotosHTML = t.followUpPhotos && t.followUpPhotos.length>0 ? `
+    <div style="margin-top:10px">
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;font-weight:600">📷 Foto Tindak Lanjut</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        ${t.followUpPhotos.map(p=>`<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open(this.src,'_blank')">`).join('')}
+      </div>
+    </div>` : '';
+
   document.getElementById('modalTicketId').textContent='Detail Laporan — '+t.id;
   document.getElementById('modalTicketContent').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -965,6 +1076,7 @@ function openTicket(id, isSchool){
       <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Deskripsi Permasalahan</div>
       <div style="line-height:1.7;font-size:14px">${t.desc}</div>
     </div>
+    ${photosHTML}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div style="background:var(--neutral);border-radius:8px;padding:12px">
         <div style="font-size:11px;color:var(--text-3);margin-bottom:3px">Pelapor</div>
@@ -978,10 +1090,28 @@ function openTicket(id, isSchool){
         <div style="font-size:12px;color:var(--text-2)">NPSN: ${t.schoolId}</div>
       </div>
     </div>
+    ${t.notes?`<div style="background:var(--success-pale);border-radius:8px;padding:12px 16px;margin-bottom:12px;border:1px solid #a9dfbf">
+      <div style="font-size:12px;color:var(--success);font-weight:600;margin-bottom:4px">📋 Catatan Tindak Lanjut</div>
+      <div style="font-size:13px;color:var(--text)">${t.notes}</div>
+      ${followUpPhotosHTML}
+    </div>`:(followUpPhotosHTML?`<div style="margin-bottom:12px">${followUpPhotosHTML}</div>`:'')}
     ${isSchool?`
     <div style="border-top:1px solid var(--border);padding-top:16px">
       <div style="font-size:13px;font-weight:600;margin-bottom:8px">Catatan Tindak Lanjut</div>
       <textarea id="ticketNotes" placeholder="Tuliskan langkah tindak lanjut yang telah dilakukan..." style="margin-bottom:12px;min-height:80px">${t.notes}</textarea>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">📷 Lampiran Foto Tindak Lanjut <span style="font-size:11px;color:var(--text-3);font-weight:400">(wajib)</span></div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button type="button" class="btn btn-outline btn-sm" style="flex:1;justify-content:center" onclick="document.getElementById('followUpPhotoInputCamera').click()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="8" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="14" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 8V7a4 4 0 018 0v1" stroke="currentColor" stroke-width="1.5"/></svg>
+          Ambil Foto
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" style="flex:1;justify-content:center" onclick="document.getElementById('followUpPhotoInputGallery').click()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          Dari Galeri
+        </button>
+      </div>
+      <div style="font-size:11px;color:var(--text-3);text-align:center;margin-bottom:8px">Maks. 3 foto, JPG/PNG</div>
+      <div id="followUpPreview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm" style="background:var(--warning-pale);color:var(--warning);border:1px solid #f9e79f" onclick="updateStatusModal('${t.id}','Dalam Proses')">Tandai: Dalam Proses</button>
         <button class="btn btn-sm" style="background:var(--success-pale);color:var(--success);border:1px solid #a9dfbf" onclick="updateStatusModal('${t.id}','Selesai')">Tandai: Selesai</button>
@@ -1001,12 +1131,21 @@ function updateStatus(id,status){
 
 function updateStatusModal(id,status){
   const notes=document.getElementById('ticketNotes').value.trim();
-  DB=loadDB();
-  const t=DB.tickets.find(x=>x.id===id);
-  if(t){t.status=status;t.notes=notes;saveDB(DB);}
-  closeModal('ticketModal');
-  renderSchoolTickets();
-  updateSchoolStats();
+  if(!notes){return alert('Harap isi catatan tindak lanjut sebelum menyimpan.');}
+  if(followUpPhotoFiles.length===0){return alert('Harap lampirkan minimal 1 foto tindak lanjut.');}
+
+  const promises = followUpPhotoFiles.map(f=>new Promise(resolve=>{
+    const r=new FileReader(); r.onload=e=>resolve(e.target.result); r.readAsDataURL(f);
+  }));
+  Promise.all(promises).then(photos=>{
+    DB=loadDB();
+    const t=DB.tickets.find(x=>x.id===id);
+    if(t){t.status=status;t.notes=notes;t.followUpPhotos=photos;saveDB(DB);}
+    followUpPhotoFiles=[];
+    closeModal('ticketModal');
+    renderSchoolTickets();
+    updateSchoolStats();
+  });
 }
 
 // ====================== CHANGE PASSWORD ======================
@@ -1063,6 +1202,127 @@ function showAlert(elId,type,msg){
   if(!el) return;
   el.innerHTML=`<div class="alert alert-${type}"><div class="alert-icon">${type==='success'?'✅':type==='danger'?'❌':'ℹ️'}</div><div>${msg}</div></div>`;
   setTimeout(()=>{if(type!=='success')return; el.innerHTML=''},8000);
+}
+
+// ====================== FOLLOW-UP PHOTO UPLOAD ======================
+function handleFollowUpPhotos(inp){
+  const files = Array.from(inp.files).slice(0,3);
+  followUpPhotoFiles = files;
+  const prev = document.getElementById('followUpPreview');
+  if(!prev) return;
+  prev.innerHTML='';
+  files.forEach(f=>{
+    const reader = new FileReader();
+    reader.onload=e=>{
+      const img = document.createElement('img');
+      img.style.cssText='width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border)';
+      img.src=e.target.result;
+      prev.appendChild(img);
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+// ====================== TRACKING ======================
+function trackReport(){
+  const id = document.getElementById('trackInput').value.trim().toUpperCase();
+  const el = document.getElementById('trackResult');
+  if(!id){ el.innerHTML='<div class="alert alert-warning"><div class="alert-icon">⚠️</div><div>Masukkan nomor tiket terlebih dahulu.</div></div>'; return; }
+  DB=loadDB();
+  const t=DB.tickets.find(x=>x.id===id);
+  if(!t){ el.innerHTML=`<div class="alert alert-danger"><div class="alert-icon">❌</div><div>Nomor tiket <strong>${id}</strong> tidak ditemukan. Pastikan nomor tiket yang Anda masukkan benar.</div></div>`; return; }
+  const date=new Date(t.date).toLocaleString('id-ID',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const statusClass=t.status==='Baru'?'badge-new':t.status==='Dalam Proses'?'badge-process':'badge-done';
+  const statusIcon=t.status==='Baru'?'🆕':t.status==='Dalam Proses'?'⚙️':'✅';
+  const steps=[
+    {label:'Laporan Dikirim',done:true},
+    {label:'Diterima Sekolah',done:t.status!=='Baru'},
+    {label:'Dalam Proses',done:t.status==='Dalam Proses'||t.status==='Selesai'},
+    {label:'Selesai',done:t.status==='Selesai'}
+  ];
+  const photosHTML = t.photos && t.photos.length>0 ? `
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;color:var(--text-3);font-weight:600;margin-bottom:6px">📷 Foto Laporan</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+        ${t.photos.map(p=>`<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer" onclick="window.open(this.src,'_blank')">`).join('')}
+      </div>
+    </div>` : '';
+  const followUpPhotosHTML = t.followUpPhotos && t.followUpPhotos.length>0 ? `
+    <div style="margin-top:8px">
+      <div style="font-size:12px;color:var(--success);font-weight:600;margin-bottom:6px">📷 Foto Tindak Lanjut</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+        ${t.followUpPhotos.map(p=>`<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer" onclick="window.open(this.src,'_blank')">`).join('')}
+      </div>
+    </div>` : '';
+  el.innerHTML=`
+    <div style="background:var(--primary-pale);border:1px solid #aed6f1;border-radius:12px;padding:16px;margin-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <div style="font-size:11px;color:var(--text-3)">Nomor Tiket</div>
+          <div style="font-size:18px;font-weight:700;color:var(--primary);font-family:'Sora',sans-serif">${t.id}</div>
+        </div>
+        <span class="badge ${statusClass}" style="font-size:13px;padding:6px 14px">${statusIcon} ${t.status}</span>
+      </div>
+      <div class="steps" style="margin-bottom:12px">
+        ${steps.map(s=>`<div class="step ${s.done?'done':''}"><span class="step-num">${s.done?'✓':''}</span>${s.label}</div>`).join('')}
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:2px">Topik</div>
+        <div style="font-weight:600;font-size:14px">${t.topic}</div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:4px">Dilaporkan: ${date}</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px">Sekolah</div>
+        <div style="font-weight:600;font-size:14px">${t.schoolName}</div>
+      </div>
+      ${photosHTML}
+      ${t.notes?`<div style="background:var(--success-pale);border-radius:8px;padding:12px;border:1px solid #a9dfbf">
+        <div style="font-size:11px;color:var(--success);font-weight:600;margin-bottom:4px">📋 Tindak Lanjut Sekolah</div>
+        <div style="font-size:13px;color:var(--text)">${t.notes}</div>
+        ${followUpPhotosHTML}
+      </div>`:'<div style="background:var(--warning-pale);border-radius:8px;padding:12px;border:1px solid #f9e79f;font-size:13px;color:var(--warning)">⏳ Laporan Anda sedang menunggu tindak lanjut dari pihak sekolah.</div>'}
+    </div>`;
+}
+
+// ====================== ADMIN CHANGE PASSWORD ======================
+function openAdminChangePass(){
+  document.getElementById('adminChangePassAlert').innerHTML='';
+  document.getElementById('adminOldPass').value='';
+  document.getElementById('adminNewPass1').value='';
+  document.getElementById('adminNewPass2').value='';
+  openModal('adminChangePassModal');
+}
+
+function saveAdminPassword(){
+  const old=document.getElementById('adminOldPass').value;
+  const p1=document.getElementById('adminNewPass1').value;
+  const p2=document.getElementById('adminNewPass2').value;
+  DB=loadDB();
+  if(old!==DB.admin.password){return showAlert('adminChangePassAlert','danger','Password lama tidak sesuai.')}
+  if(p1.length<8){return showAlert('adminChangePassAlert','danger','Password baru minimal 8 karakter.')}
+  if(p1!==p2){return showAlert('adminChangePassAlert','danger','Konfirmasi password tidak cocok.')}
+  DB.admin.password=p1;
+  saveDB(DB);
+  closeModal('adminChangePassModal');
+  alert('✅ Password administrator berhasil diperbarui!');
+}
+
+// ====================== ADMIN FORGOT PASSWORD ======================
+function openAdminForgotPass(){
+  document.getElementById('adminForgotAlert').innerHTML='';
+  openModal('adminForgotPassModal');
+}
+
+function sendAdminForgotPass(){
+  // Kirim email via mailto ke developer (fallback karena tidak ada backend)
+  const subject = encodeURIComponent('[SiLaPor] Permintaan Reset Password Administrator');
+  const body = encodeURIComponent(
+    'Halo Developer,\n\nTerdapat permintaan reset password untuk akun Administrator SiLaPor.\n\n' +
+    'Waktu permintaan: ' + new Date().toLocaleString('id-ID') + '\n\n' +
+    'Mohon segera proses permintaan ini.\n\nTerima kasih.'
+  );
+  window.location.href = `mailto:twin.insani@gmail.com?subject=${subject}&body=${body}`;
+  showAlert('adminForgotAlert','success','✅ Aplikasi email Anda akan terbuka untuk mengirim permintaan ke developer. Jika tidak terbuka otomatis, kirim email manual ke twin.insani@gmail.com');
 }
 
 // ====================== INIT ======================
