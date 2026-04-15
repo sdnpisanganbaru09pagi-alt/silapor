@@ -30,6 +30,16 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f4f8;color:var(--t
 .nav-user{color:rgba(255,255,255,0.9);font-size:13px;display:flex;align-items:center;gap:8px}
 .nav-logout{background:rgba(255,255,255,0.15);border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif}
 
+/* MOBILE NAV */
+.nav-menu-btn{display:none;background:none;border:none;color:#fff;cursor:pointer;padding:8px;border-radius:6px;transition:background .2s}
+.nav-menu-btn:hover{background:rgba(255,255,255,0.15)}
+.nav-menu-btn svg{width:24px;height:24px}
+.mobile-nav{display:none;position:fixed;top:56px;left:0;right:0;background:var(--primary);z-index:99;border-top:1px solid rgba(255,255,255,0.1);box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.mobile-nav.show{display:block}
+.mobile-nav .nav-tab{display:block;width:100%;text-align:left;padding:14px 24px;border-radius:0;border-bottom:1px solid rgba(255,255,255,0.1);font-size:14px}
+.mobile-nav .nav-tab:last-child{border-bottom:none}
+.mobile-nav .nav-tab.active{background:rgba(255,255,255,0.2)}
+
 /* PAGES */
 .page{display:none;padding:24px;max-width:960px;margin:0 auto;width:100%}
 .page.active{display:block}
@@ -168,6 +178,7 @@ tr:hover td{background:#fafbfe}
 .stats-grid{grid-template-columns:repeat(2,1fr)}
 .form-row{grid-template-columns:1fr}
 .nav-tabs{display:none}
+.nav-menu-btn{display:block}
 }
 
 .divider{height:1px;background:var(--border);margin:16px 0}
@@ -179,6 +190,7 @@ tr:hover td{background:#fafbfe}
 .items-center{align-items:center}.justify-between{justify-content:space-between}
 .hidden{display:none!important}
 </style>
+<base target="_blank">
 </head>
 <body>
 <div class="app">
@@ -189,18 +201,38 @@ tr:hover td{background:#fafbfe}
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><polyline points="9,22 9,12 15,12 15,22" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
     SiLaPor <span>BETA</span>
   </div>
+
+  <!-- Desktop Navigation -->
   <div class="nav-tabs" id="navTabs">
     <button class="nav-tab active" onclick="showPage('reporter')">Laporan</button>
     <button class="nav-tab" onclick="showPage('tracking')">Lacak Laporan</button>
     <button class="nav-tab" onclick="showPage('school-login')">Login Sekolah</button>
     <button class="nav-tab" onclick="showPage('admin-login')">Admin</button>
   </div>
+
+  <!-- Mobile Hamburger Button -->
+  <button class="nav-menu-btn" id="mobileMenuBtn" onclick="toggleMobileNav()" aria-label="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </button>
+
   <div class="nav-user" id="navUser" style="display:none">
     <span id="navUserName"></span>
     <button class="nav-logout" id="btnAdminChangePass" style="display:none;background:rgba(255,255,255,0.15);border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:4px" onclick="openAdminChangePass()">Ganti Password</button>
     <button class="nav-logout" onclick="logout()">Keluar</button>
   </div>
 </nav>
+
+<!-- Mobile Navigation Menu -->
+<div class="mobile-nav" id="mobileNav">
+  <button class="nav-tab active" onclick="showPage('reporter');toggleMobileNav()">Laporan</button>
+  <button class="nav-tab" onclick="showPage('tracking');toggleMobileNav()">Lacak Laporan</button>
+  <button class="nav-tab" onclick="showPage('school-login');toggleMobileNav()">Login Sekolah</button>
+  <button class="nav-tab" onclick="showPage('admin-login');toggleMobileNav()">Admin</button>
+</div>
 
 <!-- ==================== PAGE: PELAPOR ==================== -->
 <div class="page active" id="page-reporter">
@@ -290,20 +322,18 @@ tr:hover td{background:#fafbfe}
     <div class="divider"></div>
 
     <div class="captcha-box">
-      <div class="captcha-check" id="captchaCheck" onclick="verifyCaptcha()">
-        <svg id="captchaIcon" width="12" height="12" fill="none" style="display:none"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
       <div style="flex:1">
-        <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">Verifikasi: berapa hasil dari</div>
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">Verifikasi keamanan: berapa hasil dari</div>
         <div style="display:flex;align-items:center;gap:12px">
           <div class="captcha-math" id="captchaQ"></div>
           <span style="font-size:13px;color:var(--text-2)">=</span>
-          <input type="number" class="captcha-input" id="captchaAns" placeholder="?" style="width:70px">
+          <input type="number" class="captcha-input" id="captchaAns" placeholder="?" style="width:70px" oninput="checkCaptchaAuto()">
         </div>
+        <div id="captchaStatus" style="font-size:12px;margin-top:6px;height:18px;font-weight:500"></div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:11px;color:var(--text-3)">reCAPTCHA</div>
-        <div style="font-size:10px;color:var(--text-3)">Privasi · Syarat</div>
+        <div style="font-size:11px;color:var(--text-3)">Verifikasi Otomatis</div>
+        <div style="font-size:10px;color:var(--text-3)">Jawab pertanyaan di atas</div>
       </div>
     </div>
 
@@ -688,6 +718,12 @@ let resetTargetNPSN = '';
 let photoFiles = [];
 let followUpPhotoFiles = [];
 
+// ====================== MOBILE NAVIGATION ======================
+function toggleMobileNav(){
+  const mobileNav = document.getElementById('mobileNav');
+  mobileNav.classList.toggle('show');
+}
+
 // ====================== NAVIGATION ======================
 function showPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -696,12 +732,15 @@ function showPage(page){
   const tabs = document.querySelectorAll('.nav-tab');
   const map = {'reporter':0,'tracking':1,'school-login':2,'admin-login':3};
   if(map[page]!==undefined) tabs[map[page]].classList.add('active');
+  // Close mobile nav when switching pages
+  document.getElementById('mobileNav').classList.remove('show');
 }
 
 function logout(){
   currentUser = null;
   document.getElementById('navUser').style.display='none';
   document.getElementById('navTabs').style.display='flex';
+  document.getElementById('mobileMenuBtn').style.display='block';
   document.getElementById('btnAdminChangePass').style.display='none';
   showPage('reporter');
 }
@@ -712,23 +751,36 @@ function genCaptcha(){
   captchaB = Math.floor(Math.random()*10)+1;
   document.getElementById('captchaQ').textContent = captchaA + ' + ' + captchaB;
   document.getElementById('captchaAns').value = '';
+  document.getElementById('captchaAns').style.borderColor = 'var(--border)';
   captchaVerified = false;
-  const chk = document.getElementById('captchaCheck');
-  chk.classList.remove('checked');
-  document.getElementById('captchaIcon').style.display='none';
+  const statusEl = document.getElementById('captchaStatus');
+  if(statusEl) statusEl.textContent = '';
+}
+
+function checkCaptchaAuto(){
+  const ans = parseInt(document.getElementById('captchaAns').value);
+  const statusEl = document.getElementById('captchaStatus');
+
+  if(ans === captchaA + captchaB){
+    captchaVerified = true;
+    statusEl.textContent = '✅ Verifikasi berhasil!';
+    statusEl.style.color = 'var(--success)';
+    document.getElementById('captchaAns').style.borderColor = 'var(--success)';
+  } else if(document.getElementById('captchaAns').value.length > 0){
+    captchaVerified = false;
+    statusEl.textContent = '❌ Jawaban salah';
+    statusEl.style.color = 'var(--danger)';
+    document.getElementById('captchaAns').style.borderColor = 'var(--danger)';
+  } else {
+    captchaVerified = false;
+    statusEl.textContent = '';
+    document.getElementById('captchaAns').style.borderColor = 'var(--border)';
+  }
 }
 
 function verifyCaptcha(){
-  const ans = parseInt(document.getElementById('captchaAns').value);
-  if(ans === captchaA + captchaB){
-    captchaVerified = true;
-    const chk = document.getElementById('captchaCheck');
-    chk.classList.add('checked');
-    document.getElementById('captchaIcon').style.display='block';
-  } else {
-    showAlert('reporterAlert','danger','Jawaban verifikasi salah. Silakan coba lagi.');
-    genCaptcha();
-  }
+  // Legacy function - kept for compatibility, now auto-verified via checkCaptchaAuto()
+  checkCaptchaAuto();
 }
 
 // ====================== SCHOOL SEARCH DROPDOWN ======================
@@ -801,7 +853,7 @@ function submitReport(){
   if(!schoolId){return showAlert('reporterAlert','danger','Pilih sekolah dari dropdown.')}
   if(!topic){return showAlert('reporterAlert','danger','Pilih topik permasalahan.')}
   if(desc.length<20){return showAlert('reporterAlert','danger','Deskripsi permasalahan minimal 20 karakter.')}
-  if(!captchaVerified){return showAlert('reporterAlert','danger','Harap selesaikan verifikasi CAPTCHA terlebih dahulu.')}
+  if(!captchaVerified){return showAlert('reporterAlert','danger','Harap jawab pertanyaan verifikasi matematika dengan benar.')}
 
   DB = loadDB();
   const id = 'TKT-' + String(DB.tickets.length+1).padStart(3,'0');
@@ -836,7 +888,6 @@ function submitReport(){
     document.getElementById('photoPreview').innerHTML='';
     photoFiles=[];
     genCaptcha();
-    captchaVerified=false;
 
     showAlert('reporterAlert','success',`✅ Laporan berhasil dikirim! Nomor Tiket Anda: <strong>${id}</strong>. Simpan nomor ini untuk tracking laporan.`);
     window.scrollTo({top:0,behavior:'smooth'});
@@ -907,6 +958,7 @@ function adminLogin(){
   if(user===DB.admin.username && pass===DB.admin.password){
     currentUser={type:'admin'};
     document.getElementById('navTabs').style.display='none';
+    document.getElementById('mobileMenuBtn').style.display='none';
     document.getElementById('navUser').style.display='flex';
     document.getElementById('navUserName').textContent='Administrator';
     document.getElementById('btnAdminChangePass').style.display='inline-block';
@@ -1328,7 +1380,7 @@ function sendAdminForgotPass(){
 // ====================== INIT ======================
 genCaptcha();
 document.getElementById('captchaAns').addEventListener('keyup',function(e){
-  if(e.key==='Enter') verifyCaptcha();
+  if(e.key==='Enter') checkCaptchaAuto();
 });
 </script>
 </body>
