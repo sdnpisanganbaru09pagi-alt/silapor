@@ -991,6 +991,95 @@ document.addEventListener('click',function(e){
   if(!e.target.closest('.search-select')) document.getElementById('schoolDropdown').classList.remove('show');
 });
 
+// ====================== IMAGE COMPRESSION ======================
+/**
+ * Kompresi gambar menggunakan Canvas API.
+ * Target: maks 50KB per foto, dengan kualitas JPEG yang masih dapat diterima.
+ * Strategi: resize bertahap + turunkan quality secara iteratif.
+ */
+async function compressImage(file, maxSizeKB = 50) {
+  const MAX_BYTES = maxSizeKB * 1024;
+  const MAX_DIM = 1280; // resolusi maks (lebar atau tinggi)
+  const MIN_QUALITY = 0.25; // batas bawah quality agar tidak terlalu buram
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        // Hitung dimensi proporsional agar tidak melebihi MAX_DIM
+        let { width, height } = img;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width >= height) {
+            height = Math.round((height / width) * MAX_DIM);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width / height) * MAX_DIM);
+            height = MAX_DIM;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Coba kompresi iteratif mulai quality 0.75, turun 0.05 per step
+        let quality = 0.75;
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+        function base64SizeBytes(b64) {
+          // Base64 string tanpa header "data:...;base64,"
+          const base = b64.split(',')[1] || b64;
+          return Math.ceil((base.length * 3) / 4);
+        }
+
+        // Iterasi turunkan quality sampai di bawah target atau mencapai minimum
+        while (base64SizeBytes(dataUrl) > MAX_BYTES && quality > MIN_QUALITY) {
+          quality = Math.max(quality - 0.05, MIN_QUALITY);
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        // Jika masih terlalu besar dengan quality minimum, kecilkan resolusi lebih lanjut
+        if (base64SizeBytes(dataUrl) > MAX_BYTES) {
+          let scale = 0.85;
+          while (base64SizeBytes(dataUrl) > MAX_BYTES && scale > 0.2) {
+            const w2 = Math.round(width * scale);
+            const h2 = Math.round(height * scale);
+            const c2 = document.createElement('canvas');
+            c2.width = w2; c2.height = h2;
+            c2.getContext('2d').drawImage(img, 0, 0, w2, h2);
+            dataUrl = c2.toDataURL('image/jpeg', MIN_QUALITY);
+            scale -= 0.1;
+          }
+        }
+
+        resolve(dataUrl);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Kompresi array file gambar secara paralel.
+ * Menampilkan ukuran sebelum/sesudah di console untuk debug.
+ */
+async function compressImages(files, maxSizeKB = 50) {
+  const results = await Promise.all(files.map(async (f) => {
+    const compressed = await compressImage(f, maxSizeKB);
+    const origKB = (f.size / 1024).toFixed(1);
+    const compKB = (((compressed.split(',')[1]||'').length * 3 / 4) / 1024).toFixed(1);
+    console.log(`[Kompresi] ${f.name}: ${origKB}KB → ${compKB}KB`);
+    return compressed;
+  }));
+  return results;
+}
+
 // ====================== PHOTO UPLOAD ======================
 function triggerPhoto(){
   document.getElementById('photoInput').click();
@@ -999,23 +1088,26 @@ function triggerPhoto(){
 function handlePhotos(inp){
   const files = Array.from(inp.files).slice(0,3);
   if(files.length === 0) return;
-  photoFiles = files;
   // Reset other photo inputs so they don't carry stale state
   ['photoInput','photoInputCamera','photoInputGallery'].forEach(id=>{
     const el = document.getElementById(id);
     if(el && el !== inp) el.value = '';
   });
   const prev = document.getElementById('photoPreview');
-  prev.innerHTML='';
-  files.forEach(f=>{
-    const reader = new FileReader();
-    reader.onload=e=>{
+  prev.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:12px;color:var(--text-3);font-size:13px">⏳ Mengompresi foto...</div>';
+
+  // Simpan sebagai compressed base64 (bukan File mentah)
+  compressImages(files, 50).then(compressedDataUrls => {
+    photoFiles = compressedDataUrls; // sudah berupa array dataUrl
+    prev.innerHTML='';
+    compressedDataUrls.forEach(dataUrl=>{
       const img = document.createElement('img');
       img.className='photo-thumb';
-      img.src=e.target.result;
+      img.src=dataUrl;
       prev.appendChild(img);
-    };
-    reader.readAsDataURL(f);
+    });
+  }).catch(()=>{
+    prev.innerHTML='<div style="grid-column:1/-1;color:var(--danger);font-size:13px">❌ Gagal memproses foto. Coba lagi.</div>';
   });
 }
 
@@ -1043,14 +1135,9 @@ function submitReport(){
   // Generate collision-safe ID using timestamp
   const id = 'TKT-' + Date.now().toString(36).toUpperCase().slice(-6);
 
-  // Save photos as base64
+  // Photos sudah di-compress & disimpan sebagai base64 dataUrl di photoFiles
   async function collectPhotos(){
-    const promises = photoFiles.map(f => new Promise(resolve=>{
-      const r = new FileReader();
-      r.onload = e => resolve(e.target.result);
-      r.readAsDataURL(f);
-    }));
-    return Promise.all(promises);
+    return photoFiles; // sudah berupa array dataUrl hasil kompresi
   }
 
   collectPhotos().then(async photos => {
@@ -1389,10 +1476,9 @@ function updateStatusModal(id,status){
   if(!notes){return alert('Harap isi catatan tindak lanjut sebelum menyimpan.');}
   if(followUpPhotoFiles.length===0){return alert('Harap lampirkan minimal 1 foto tindak lanjut.');}
 
-  const promises = followUpPhotoFiles.map(f=>new Promise(resolve=>{
-    const r=new FileReader(); r.onload=e=>resolve(e.target.result); r.readAsDataURL(f);
-  }));
-  Promise.all(promises).then(async photos=>{
+  // followUpPhotoFiles sudah berupa array dataUrl hasil kompresi
+  const photos = followUpPhotoFiles;
+  (async () => {
     DB=loadDB();
     const t=DB.tickets.find(x=>x.id===id);
     if(t){
@@ -1403,7 +1489,7 @@ function updateStatusModal(id,status){
     closeModal('ticketModal');
     renderSchoolTickets();
     updateSchoolStats();
-  });
+  })();
 }
 
 // ====================== CHANGE PASSWORD ======================
@@ -1474,7 +1560,6 @@ function showAlert(elId,type,msg){
 function handleFollowUpPhotos(inp){
   const files = Array.from(inp.files).slice(0,3);
   if(files.length === 0) return;
-  followUpPhotoFiles = files;
   // Reset other follow-up inputs so they don't carry stale state
   ['followUpPhotoInput','followUpPhotoInputCamera','followUpPhotoInputGallery'].forEach(id=>{
     const el = document.getElementById(id);
@@ -1482,16 +1567,19 @@ function handleFollowUpPhotos(inp){
   });
   const prev = document.getElementById('followUpPreview');
   if(!prev) return;
-  prev.innerHTML='';
-  files.forEach(f=>{
-    const reader = new FileReader();
-    reader.onload=e=>{
+  prev.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:10px;color:var(--text-3);font-size:13px">⏳ Mengompresi foto...</div>';
+
+  compressImages(files, 50).then(compressedDataUrls => {
+    followUpPhotoFiles = compressedDataUrls; // simpan sebagai array dataUrl
+    prev.innerHTML='';
+    compressedDataUrls.forEach(dataUrl=>{
       const img = document.createElement('img');
       img.style.cssText='width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border)';
-      img.src=e.target.result;
+      img.src=dataUrl;
       prev.appendChild(img);
-    };
-    reader.readAsDataURL(f);
+    });
+  }).catch(()=>{
+    prev.innerHTML='<div style="grid-column:1/-1;color:var(--danger);font-size:13px">❌ Gagal memproses foto. Coba lagi.</div>';
   });
 }
 
