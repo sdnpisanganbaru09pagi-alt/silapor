@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -9,7 +10,6 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, set, get, update, onValue, push, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-  import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
   // ============================================================
   // 🔧 GANTI KONFIGURASI FIREBASE DI BAWAH INI
@@ -27,11 +27,9 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
-  const storage = getStorage(app);
 
   // Expose ke global scope
   window._firebaseDB = db;
-  window._firebaseStorage = storage;
   window._fbRef = ref;
   window._fbSet = set;
   window._fbGet = get;
@@ -39,9 +37,6 @@
   window._fbOnValue = onValue;
   window._fbPush = push;
   window._fbChild = child;
-  window._fbStorageRef = sRef;
-  window._fbUploadBytes = uploadBytes;
-  window._fbGetDownloadURL = getDownloadURL;
 
   // Inisialisasi data awal jika belum ada
   async function initFirebaseDB() {
@@ -997,46 +992,6 @@ document.addEventListener('click',function(e){
 });
 
 // ====================== PHOTO UPLOAD ======================
-// Kompresi gambar via Canvas: resize max 800px + output WebP q=0.75
-// Menghemat ~70-85% ukuran sebelum diupload ke Firebase Storage
-function compressImage(file, maxSize=800, quality=0.75){
-  return new Promise(resolve=>{
-    const blobUrl = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = ()=>{
-      let w=img.width, h=img.height;
-      if(w>maxSize||h>maxSize){
-        if(w>=h){h=Math.round(h*maxSize/w);w=maxSize;}
-        else{w=Math.round(w*maxSize/h);h=maxSize;}
-      }
-      const canvas=document.createElement('canvas');
-      canvas.width=w; canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      URL.revokeObjectURL(blobUrl);
-      // Coba WebP, fallback ke JPEG
-      canvas.toBlob(blob=>{
-        resolve(blob||null);
-      }, 'image/webp', quality);
-    };
-    img.onerror=()=>{URL.revokeObjectURL(blobUrl);resolve(null);};
-    img.src=blobUrl;
-  });
-}
-
-// Upload satu foto ke Firebase Storage, return download URL
-async function uploadPhotoToStorage(file, path){
-  try{
-    const blob = await compressImage(file);
-    if(!blob) return null;
-    const storageRef = window._fbStorageRef(window._firebaseStorage, path);
-    const snap = await window._fbUploadBytes(storageRef, blob, {contentType:'image/webp'});
-    return await window._fbGetDownloadURL(snap.ref);
-  } catch(e){
-    console.error('Upload error:', e);
-    return null;
-  }
-}
-
 function triggerPhoto(){
   document.getElementById('photoInput').click();
 }
@@ -1045,31 +1000,33 @@ function handlePhotos(inp){
   const files = Array.from(inp.files).slice(0,3);
   if(files.length === 0) return;
   photoFiles = files;
+  // Reset other photo inputs so they don't carry stale state
   ['photoInput','photoInputCamera','photoInputGallery'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el && el!==inp) el.value='';
+    const el = document.getElementById(id);
+    if(el && el !== inp) el.value = '';
   });
-  const prev=document.getElementById('photoPreview');
+  const prev = document.getElementById('photoPreview');
   prev.innerHTML='';
   files.forEach(f=>{
-    // Preview via Blob URL — cepat, tidak boros memori
-    const blobUrl=URL.createObjectURL(f);
-    const img=document.createElement('img');
-    img.className='photo-thumb';
-    img.onload=()=>URL.revokeObjectURL(blobUrl);
-    img.src=blobUrl;
-    prev.appendChild(img);
+    const reader = new FileReader();
+    reader.onload=e=>{
+      const img = document.createElement('img');
+      img.className='photo-thumb';
+      img.src=e.target.result;
+      prev.appendChild(img);
+    };
+    reader.readAsDataURL(f);
   });
 }
 
 // ====================== SUBMIT REPORT ======================
 function submitReport(){
-  const name=document.getElementById('r_name').value.trim();
-  const wa=document.getElementById('r_wa').value.trim();
-  const schoolId=document.getElementById('r_school_id').value;
-  const schoolName=document.getElementById('r_school_name').value;
-  const topic=document.getElementById('r_topic').value;
-  const desc=document.getElementById('r_desc').value.trim();
+  const name = document.getElementById('r_name').value.trim();
+  const wa = document.getElementById('r_wa').value.trim();
+  const schoolId = document.getElementById('r_school_id').value;
+  const schoolName = document.getElementById('r_school_name').value;
+  const topic = document.getElementById('r_topic').value;
+  const desc = document.getElementById('r_desc').value.trim();
 
   if(!name){return showAlert('reporterAlert','danger','Nama pelapor wajib diisi.')}
   if(!wa){return showAlert('reporterAlert','danger','Nomor WhatsApp wajib diisi.')}
@@ -1078,29 +1035,26 @@ function submitReport(){
   if(desc.length<20){return showAlert('reporterAlert','danger','Deskripsi permasalahan minimal 20 karakter.')}
   if(!captchaVerified){return showAlert('reporterAlert','danger','Harap jawab pertanyaan verifikasi matematika dengan benar.')}
 
-  const submitBtn=document.querySelector('#page-reporter .btn-primary');
-  submitBtn.disabled=true;
-  submitBtn.textContent='Mengunggah foto...';
+  const submitBtn = document.querySelector('#page-reporter .btn-primary');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Mengirim...';
 
-  DB=loadDB();
-  const id='TKT-'+Date.now().toString(36).toUpperCase().slice(-6);
+  DB = loadDB();
+  // Generate collision-safe ID using timestamp
+  const id = 'TKT-' + Date.now().toString(36).toUpperCase().slice(-6);
 
-  // Upload semua foto ke Firebase Storage (terkompresi WebP), simpan URL-nya
-  async function uploadAllPhotos(){
-    if(photoFiles.length===0) return [];
-    submitBtn.textContent=`Mengunggah foto (0/${photoFiles.length})...`;
-    const urls=[];
-    for(let i=0;i<photoFiles.length;i++){
-      submitBtn.textContent=`Mengunggah foto (${i+1}/${photoFiles.length})...`;
-      const url=await uploadPhotoToStorage(photoFiles[i], `photos/${id}/foto_${i+1}.webp`);
-      if(url) urls.push(url);
-    }
-    return urls;
+  // Save photos as base64
+  async function collectPhotos(){
+    const promises = photoFiles.map(f => new Promise(resolve=>{
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result);
+      r.readAsDataURL(f);
+    }));
+    return Promise.all(promises);
   }
 
-  uploadAllPhotos().then(async photos=>{
-    submitBtn.textContent='Menyimpan laporan...';
-    const ticket={
+  collectPhotos().then(async photos => {
+    const ticket = {
       id, reporter:name, email:document.getElementById('r_email').value.trim(),
       wa, schoolId, schoolName, topic, desc, photos, status:'Baru',
       date:new Date().toISOString(), notes:'', followUpPhotos:[]
@@ -1120,13 +1074,15 @@ function submitReport(){
     photoFiles=[];
     genCaptcha();
 
-    submitBtn.disabled=false;
-    submitBtn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="22" y1="2" x2="11" y2="13" stroke="#fff" stroke-width="2"/><polygon points="22,2 15,22 11,13 2,9" stroke="#fff" stroke-width="2" fill="none"/></svg> Kirim Laporan';
+    // Re-enable submit button
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="22" y1="2" x2="11" y2="13" stroke="#fff" stroke-width="2"/><polygon points="22,2 15,22 11,13 2,9" stroke="#fff" stroke-width="2" fill="none"/></svg> Kirim Laporan';
+
     showAlert('reporterAlert','success',`✅ Laporan berhasil dikirim! Nomor Tiket Anda: <strong>${id}</strong>. Simpan nomor ini untuk tracking laporan.`);
     window.scrollTo({top:0,behavior:'smooth'});
   }).catch(()=>{
-    submitBtn.disabled=false;
-    submitBtn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="22" y1="2" x2="11" y2="13" stroke="#fff" stroke-width="2"/><polygon points="22,2 15,22 11,13 2,9" stroke="#fff" stroke-width="2" fill="none"/></svg> Kirim Laporan';
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="22" y1="2" x2="11" y2="13" stroke="#fff" stroke-width="2"/><polygon points="22,2 15,22 11,13 2,9" stroke="#fff" stroke-width="2" fill="none"/></svg> Kirim Laporan';
     showAlert('reporterAlert','danger','Terjadi kesalahan saat mengirim. Coba lagi.');
   });
 }
@@ -1433,21 +1389,10 @@ function updateStatusModal(id,status){
   if(!notes){return alert('Harap isi catatan tindak lanjut sebelum menyimpan.');}
   if(followUpPhotoFiles.length===0){return alert('Harap lampirkan minimal 1 foto tindak lanjut.');}
 
-  // Disable tombol saat proses upload
-  const btns=document.querySelectorAll('#ticketModal .btn-sm[onclick^="updateStatusModal"]');
-  btns.forEach(b=>{b.disabled=true;b.textContent='Mengunggah...';});
-
-  // Upload foto follow-up terkompresi ke Firebase Storage
-  async function uploadFollowUpPhotos(){
-    const urls=[];
-    for(let i=0;i<followUpPhotoFiles.length;i++){
-      const url=await uploadPhotoToStorage(followUpPhotoFiles[i], `followup/${id}/foto_${i+1}.webp`);
-      if(url) urls.push(url);
-    }
-    return urls;
-  }
-
-  uploadFollowUpPhotos().then(async photos=>{
+  const promises = followUpPhotoFiles.map(f=>new Promise(resolve=>{
+    const r=new FileReader(); r.onload=e=>resolve(e.target.result); r.readAsDataURL(f);
+  }));
+  Promise.all(promises).then(async photos=>{
     DB=loadDB();
     const t=DB.tickets.find(x=>x.id===id);
     if(t){
@@ -1458,9 +1403,6 @@ function updateStatusModal(id,status){
     closeModal('ticketModal');
     renderSchoolTickets();
     updateSchoolStats();
-  }).catch(()=>{
-    btns.forEach(b=>{b.disabled=false;});
-    alert('Gagal mengunggah foto. Periksa koneksi internet dan coba lagi.');
   });
 }
 
@@ -1533,21 +1475,23 @@ function handleFollowUpPhotos(inp){
   const files = Array.from(inp.files).slice(0,3);
   if(files.length === 0) return;
   followUpPhotoFiles = files;
+  // Reset other follow-up inputs so they don't carry stale state
   ['followUpPhotoInput','followUpPhotoInputCamera','followUpPhotoInputGallery'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el && el!==inp) el.value='';
+    const el = document.getElementById(id);
+    if(el && el !== inp) el.value = '';
   });
-  const prev=document.getElementById('followUpPreview');
+  const prev = document.getElementById('followUpPreview');
   if(!prev) return;
   prev.innerHTML='';
   files.forEach(f=>{
-    // Preview via Blob URL — hemat memori, tidak perlu FileReader
-    const blobUrl=URL.createObjectURL(f);
-    const img=document.createElement('img');
-    img.style.cssText='width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border)';
-    img.onload=()=>URL.revokeObjectURL(blobUrl);
-    img.src=blobUrl;
-    prev.appendChild(img);
+    const reader = new FileReader();
+    reader.onload=e=>{
+      const img = document.createElement('img');
+      img.style.cssText='width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border)';
+      img.src=e.target.result;
+      prev.appendChild(img);
+    };
+    reader.readAsDataURL(f);
   });
 }
 
