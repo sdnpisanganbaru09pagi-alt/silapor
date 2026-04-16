@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -8,7 +9,7 @@
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, set, get, update, onValue, push, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getDatabase, ref, set, get, update, onValue, query, orderByChild } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
   // ============================================================
   // KONFIGURASI FIREBASE DI BAWAH INI
@@ -26,6 +27,22 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
+  // ============================================================
+  // STRATEGI HEMAT BANDWIDTH
+  // - Listener & fetch rutin: hanya field ringan (TANPA photos/followUpPhotos)
+  // - Foto hanya ditarik saat: buka detail tiket (admin/sekolah) & tracking pelapor
+  // ============================================================
+
+  // Field yang BOLEH masuk ke cache list (tanpa foto)
+  function stripPhotos(t) {
+    const { photos, followUpPhotos, ...rest } = t;
+    return {
+      ...rest,
+      hasPhotos: (photos && photos.length > 0) || false,
+      hasFollowUpPhotos: (followUpPhotos && followUpPhotos.length > 0) || false
+    };
+  }
+
   // Expose ke global scope
   window._firebaseDB = db;
   window._fbRef = ref;
@@ -33,25 +50,64 @@
   window._fbGet = get;
   window._fbUpdate = update;
   window._fbOnValue = onValue;
-  window._fbPush = push;
-  window._fbChild = child;
 
-  // Load seluruh DB ke cache lokal
+  // Inisialisasi data awal jika belum ada
+  async function initFirebaseDB() {
+    showLoadingOverlay(true);
+    try {
+      const snapshot = await get(ref(db, '/'));
+      if (!snapshot.exists()) {
+        // Database kosong — inisialisasi struktur minimal tanpa data dummy
+        const initialData = {
+          schools: {},
+          tickets: {},
+          admin: {username:"admin", password:""}
+        };
+        await set(ref(db, '/'), initialData);
+      }
+      // Load data ringan ke memory (tanpa foto)
+      await reloadDB();
+    } catch(e) {
+      console.error('Firebase init error:', e);
+      showDBError();
+    }
+    showLoadingOverlay(false);
+  }
+
+  // Load DB ringan ke cache lokal — TANPA photos & followUpPhotos
   window.reloadDB = async function() {
     try {
-      const snap = await get(ref(db, '/'));
-      if (snap.exists()) {
-        const raw = snap.val();
-        // Normalisasi: konversi objek Firebase ke array
-        window.DB = {
-          schools: raw.schools ? Object.values(raw.schools) : [],
-          tickets: raw.tickets ? Object.values(raw.tickets).map(t=>({...t, photos:t.photos||[], followUpPhotos:t.followUpPhotos||[]})) : [],
-          admin: raw.admin || {username:'admin',password:''}
-        };
-      }
+      // Ambil schools & admin (kecil, tidak ada foto)
+      const [schoolsSnap, adminSnap, ticketsSnap] = await Promise.all([
+        get(ref(db, 'schools')),
+        get(ref(db, 'admin')),
+        get(ref(db, 'tickets'))
+      ]);
+      window.DB = {
+        schools: schoolsSnap.exists() ? Object.values(schoolsSnap.val()) : [],
+        // Strip foto dari setiap tiket — hanya simpan metadata
+        tickets: ticketsSnap.exists()
+          ? Object.values(ticketsSnap.val()).map(t => stripPhotos(t))
+          : [],
+        admin: adminSnap.exists() ? adminSnap.val() : {username:'admin', password:''}
+      };
     } catch(e) {
       console.error('reloadDB error:', e);
     }
+  };
+
+  // Ambil SATU tiket lengkap (dengan foto) dari Firebase — hanya saat dibutuhkan
+  window.fbGetTicketFull = async function(id) {
+    try {
+      const snap = await get(ref(db, 'tickets/' + id));
+      if (snap.exists()) {
+        const t = snap.val();
+        return { ...t, photos: t.photos || [], followUpPhotos: t.followUpPhotos || [] };
+      }
+    } catch(e) {
+      console.error('fbGetTicketFull error:', e);
+    }
+    return null;
   };
 
   // Simpan schools ke Firebase
@@ -59,7 +115,7 @@
     await set(ref(db, 'schools/' + school.id), school);
   };
 
-  // Simpan ticket ke Firebase
+  // Simpan ticket ke Firebase (dengan foto — saat submit laporan)
   window.fbSaveTicket = async function(ticket) {
     await set(ref(db, 'tickets/' + ticket.id), ticket);
   };
@@ -79,16 +135,28 @@
     await update(ref(db, 'schools/' + id), fields);
   };
 
-  // Realtime listener untuk auto-refresh data
-  onValue(ref(db, '/'), async (snapshot) => {
-    if (snapshot.exists()) {
-      const raw = snapshot.val();
-      window.DB = {
-        schools: raw.schools ? Object.values(raw.schools) : [],
-        tickets: raw.tickets ? Object.values(raw.tickets).map(t=>({...t, photos:t.photos||[], followUpPhotos:t.followUpPhotos||[]})) : [],
-        admin: raw.admin || {username:'admin',password:''}
-      };
-      // Refresh tampilan jika sedang di halaman yang relevan
+  // Realtime listener RINGAN — hanya metadata tiket (tanpa foto)
+  // Listener terpisah per path agar tidak tarik seluruh DB sekaligus
+  let _schoolsUnsub = null, _ticketsUnsub = null;
+
+  function startRealtimeListeners() {
+    // Hentikan listener lama jika ada
+    if (_schoolsUnsub) _schoolsUnsub();
+    if (_ticketsUnsub) _ticketsUnsub();
+
+    // Listener schools (kecil, tidak ada foto)
+    _schoolsUnsub = onValue(ref(db, 'schools'), (snap) => {
+      if (!window.DB) return;
+      window.DB.schools = snap.exists() ? Object.values(snap.val()) : [];
+    });
+
+    // Listener tickets — strip foto sebelum masuk cache
+    _ticketsUnsub = onValue(ref(db, 'tickets'), (snap) => {
+      if (!window.DB) return;
+      window.DB.tickets = snap.exists()
+        ? Object.values(snap.val()).map(t => stripPhotos(t))
+        : [];
+      // Refresh tampilan jika sedang login
       if (window.currentUser) {
         if (window.currentUser.type === 'school') {
           renderSchoolTickets && renderSchoolTickets();
@@ -98,12 +166,16 @@
           renderAdminRecent && renderAdminRecent();
         }
       }
-    }
-  });
+    });
+  }
+
+  window.startRealtimeListeners = startRealtimeListeners;
 
   // Jalankan inisialisasi
   window.addEventListener('DOMContentLoaded', () => {
-    initFirebaseDB();
+    initFirebaseDB().then(() => {
+      startRealtimeListeners();
+    });
   });
 </script>
 <style>
@@ -548,7 +620,7 @@ tr:hover td{background:#fafbfe}
       <div id="adminLoginAlert"></div>
       <div class="form-group">
         <label>Username Admin</label>
-        <input type="text" id="al_user" placeholder="Username">
+        <input type="text" id="al_user" placeholder="Username admin">
       </div>
       <div class="form-group">
         <label>Password</label>
@@ -747,7 +819,7 @@ tr:hover td{background:#fafbfe}
       <button class="modal-close" onclick="closeModal('adminForgotPassModal'); closeMobileNav()">✕</button>
     </div>
     <div id="adminForgotAlert"></div>
-    <div class="alert alert-info"><div class="alert-icon">ℹ️</div><div>Link reset password akan dikirim ke email developer yang terdaftar.</div></div>
+    <div class="alert alert-info"><div class="alert-icon">ℹ️</div><div>Kirim permintaan reset password ke developer melalui email yang terdaftar.</div></div>
     <p style="font-size:13px;color:var(--text-2);margin-bottom:16px">Klik tombol di bawah untuk mengirim permintaan reset password. Developer akan membantu Anda memulihkan akses.</p>
     <button class="btn btn-primary btn-full" onclick="sendAdminForgotPass()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="#fff" stroke-width="2"/><polyline points="22,6 12,13 2,6" stroke="#fff" stroke-width="2"/></svg>
@@ -821,11 +893,6 @@ let followUpPhotoFiles = [];
 // ====================== MOBILE NAVIGATION ======================
 function toggleMobileNav(){
   const mobileNav = document.getElementById('mobileNav');
-
-  if(mobileNav.style.display === 'none') {
-    mobileNav.style.display = '';
-  }
-
   const isOpen = mobileNav.classList.toggle('show');
   document.getElementById('iconHamburger').style.display = isOpen ? 'none' : 'block';
   document.getElementById('iconClose').style.display = isOpen ? 'block' : 'none';
@@ -878,34 +945,13 @@ function showPage(page){
 
 function logout(){
   currentUser = null;
-
-  // Reset UI user
   document.getElementById('navUser').style.display='none';
   document.getElementById('mobileMenuBtn').style.display='block';
+  
   document.getElementById('btnAdminChangePass').style.display='none';
-
-  // Reset semua tab
+  // Reset all tab active states
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-
-  // Reset mobile nav state total
-  const mobileNav = document.getElementById('mobileNav');
-  mobileNav.classList.remove('show');
-
-  document.getElementById('iconHamburger').style.display = 'block';
-  document.getElementById('iconClose').style.display = 'none';
-
-  // Force repaint (hindari bug klik)
-  mobileNav.style.display = 'none';
-  setTimeout(()=>{
-    mobileNav.style.display = '';
-  }, 50);
-
-  // Tutup semua modal
-  document.querySelectorAll('.modal-overlay').forEach(m=>{
-    m.classList.remove('show');
-  });
-
-  // Balik ke halaman awal
+  closeMobileNav();
   showPage('reporter');
 }
 
@@ -1384,9 +1430,30 @@ function ticketCard(t, isSchool){
 }
 
 function openTicket(id, isSchool){
-  DB=loadDB();
-  const t=DB.tickets.find(x=>x.id===id);
-  if(!t) return;
+  // Tampilkan modal loading sementara menunggu data foto dari Firebase
+  document.getElementById('modalTicketId').textContent='Memuat detail...';
+  document.getElementById('modalTicketContent').innerHTML=
+    '<div style="text-align:center;padding:40px;color:var(--text-3)">⏳ Memuat data laporan...</div>';
+  openModal('ticketModal');
+
+  // Ambil tiket LENGKAP (dengan foto) langsung dari Firebase — hemat bandwidth
+  const fetchAndRender = async () => {
+    let t = null;
+    if (window.fbGetTicketFull) {
+      t = await window.fbGetTicketFull(id);
+    }
+    // Fallback ke cache lokal (tanpa foto) jika Firebase gagal
+    if (!t) {
+      DB = loadDB();
+      t = DB.tickets.find(x => x.id === id);
+      if (!t) {
+        document.getElementById('modalTicketContent').innerHTML =
+          '<div class="alert alert-danger"><div class="alert-icon">❌</div><div>Gagal memuat data laporan.</div></div>';
+        return;
+      }
+      t = { ...t, photos: [], followUpPhotos: [] };
+    }
+
   const date=new Date(t.date).toLocaleString('id-ID',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const statusClass=t.status==='Baru'?'badge-new':t.status==='Dalam Proses'?'badge-process':'badge-done';
 
@@ -1462,7 +1529,10 @@ function openTicket(id, isSchool){
       </div>
     </div>`:''}
   `;
-  openModal('ticketModal');
+  // (modal sudah dibuka di awal fungsi sebelum fetch)
+  };
+
+  fetchAndRender();
 }
 
 function updateStatus(id,status){
@@ -1603,12 +1673,25 @@ function handleFollowUpPhotos(inp){
 }
 
 // ====================== TRACKING ======================
-function trackReport(){
+async function trackReport(){
   const id = document.getElementById('trackInput').value.trim().toUpperCase();
   const el = document.getElementById('trackResult');
   if(!id){ el.innerHTML='<div class="alert alert-warning"><div class="alert-icon">⚠️</div><div>Masukkan nomor tiket terlebih dahulu.</div></div>'; return; }
-  DB=loadDB();
-  const t=DB.tickets.find(x=>x.id===id);
+
+  // Tampilkan loading
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--text-3)">⏳ Mencari laporan...</div>';
+
+  // Ambil tiket lengkap (dengan foto) langsung dari Firebase — satu tiket, hemat bandwidth
+  let t = null;
+  if (window.fbGetTicketFull) {
+    t = await window.fbGetTicketFull(id);
+  }
+  // Fallback ke cache lokal (tanpa foto) jika Firebase tidak tersedia
+  if (!t) {
+    DB = loadDB();
+    const cached = DB.tickets.find(x => x.id === id);
+    if (cached) t = { ...cached, photos: [], followUpPhotos: [] };
+  }
   if(!t){ el.innerHTML=`<div class="alert alert-danger"><div class="alert-icon">❌</div><div>Nomor tiket <strong>${id}</strong> tidak ditemukan. Pastikan nomor tiket yang Anda masukkan benar.</div></div>`; return; }
   const date=new Date(t.date).toLocaleString('id-ID',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const statusClass=t.status==='Baru'?'badge-new':t.status==='Dalam Proses'?'badge-process':'badge-done';
@@ -1700,8 +1783,8 @@ function sendAdminForgotPass(){
     'Waktu permintaan: ' + new Date().toLocaleString('id-ID') + '\n\n' +
     'Mohon segera proses permintaan ini.\n\nTerima kasih.'
   );
-  window.location.href = `mailto:admin@silapor.id?subject=${subject}&body=${body}`;
-  showAlert('adminForgotAlert','success','✅ Aplikasi email Anda akan terbuka untuk mengirim permintaan ke developer.');
+  window.location.href = `mailto:developer@silapor.id?subject=${subject}&body=${body}`;
+  showAlert('adminForgotAlert','success','✅ Aplikasi email Anda akan terbuka untuk mengirim permintaan reset ke developer.');
 }
 
 // ====================== INIT ======================
