@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -37,39 +36,6 @@
   window._fbPush = push;
   window._fbChild = child;
 
-  // Inisialisasi data awal jika belum ada
-  async function initFirebaseDB() {
-    showLoadingOverlay(true);
-    try {
-      const snapshot = await get(ref(db, '/'));
-      if (!snapshot.exists()) {
-        const initialData = {
-          schools: {
-            "20400001": {id:"20400001",name:"SDN 001 Jakarta Pusat",level:"SD",city:"Jakarta Pusat",password:"20400001",firstLogin:true},
-            "20400002": {id:"20400002",name:"SMPN 5 Bandung",level:"SMP",city:"Bandung",password:"20400002",firstLogin:true},
-            "20400003": {id:"20400003",name:"SMAN 3 Surabaya",level:"SMA",city:"Surabaya",password:"20400003",firstLogin:false},
-            "20400004": {id:"20400004",name:"SMKN 2 Yogyakarta",level:"SMK",city:"Yogyakarta",password:"20400004",firstLogin:true},
-            "20400005": {id:"20400005",name:"SDN Merdeka Malang",level:"SD",city:"Malang",password:"20400005",firstLogin:true},
-          },
-          tickets: {
-            "TKT-001": {id:"TKT-001",reporter:"Budi Santoso",email:"budi@gmail.com",wa:"081234567890",schoolId:"20400001",schoolName:"SDN 001 Jakarta Pusat",topic:"Kebersihan Lingkungan",desc:"Terdapat tumpukan sampah di halaman belakang sekolah yang sudah berhari-hari tidak dibersihkan.",photos:[],status:"Baru",date:"2025-01-10T08:30:00",notes:"",followUpPhotos:[]},
-            "TKT-002": {id:"TKT-002",reporter:"Siti Rahayu",email:"",wa:"082345678901",schoolId:"20400002",schoolName:"SMPN 5 Bandung",topic:"Kerusakan Fasilitas / Infrastruktur",desc:"Atap ruang kelas 7A bocor saat hujan. Sudah terjadi selama 2 minggu dan mengganggu proses belajar mengajar.",photos:[],status:"Dalam Proses",date:"2025-01-11T10:15:00",notes:"Sudah dikoordinasikan dengan bagian sarana prasarana.",followUpPhotos:[]},
-            "TKT-003": {id:"TKT-003",reporter:"Ahmad Fauzi",email:"ahmad@email.com",wa:"083456789012",schoolId:"20400003",schoolName:"SMAN 3 Surabaya",topic:"Sanitasi & Toilet",desc:"Toilet siswa putra di lantai 2 sudah tidak berfungsi dengan baik.",photos:[],status:"Selesai",date:"2025-01-09T14:00:00",notes:"Telah diperbaiki oleh teknisi pada tanggal 12 Januari 2025.",followUpPhotos:[]},
-            "TKT-004": {id:"TKT-004",reporter:"Dewi Lestari",email:"",wa:"084567890123",schoolId:"20400001",schoolName:"SDN 001 Jakarta Pusat",topic:"Keamanan & Keselamatan",desc:"Pagar sekolah bagian barat ada yang sudah rapuh dan bisa membahayakan siswa.",photos:[],status:"Baru",date:"2025-01-12T09:00:00",notes:"",followUpPhotos:[]},
-          },
-          admin: {username:"admin",password:"admin123"}
-        };
-        await set(ref(db, '/'), initialData);
-      }
-      // Load data ke memory
-      await reloadDB();
-    } catch(e) {
-      console.error('Firebase init error:', e);
-      showDBError();
-    }
-    showLoadingOverlay(false);
-  }
-
   // Load seluruh DB ke cache lokal
   window.reloadDB = async function() {
     try {
@@ -80,7 +46,7 @@
         window.DB = {
           schools: raw.schools ? Object.values(raw.schools) : [],
           tickets: raw.tickets ? Object.values(raw.tickets).map(t=>({...t, photos:t.photos||[], followUpPhotos:t.followUpPhotos||[]})) : [],
-          admin: raw.admin || {username:'admin',password:'admin123'}
+          admin: raw.admin || {username:'admin',password:''}
         };
       }
     } catch(e) {
@@ -120,7 +86,7 @@
       window.DB = {
         schools: raw.schools ? Object.values(raw.schools) : [],
         tickets: raw.tickets ? Object.values(raw.tickets).map(t=>({...t, photos:t.photos||[], followUpPhotos:t.followUpPhotos||[]})) : [],
-        admin: raw.admin || {username:'admin',password:'admin123'}
+        admin: raw.admin || {username:'admin',password:''}
       };
       // Refresh tampilan jika sedang di halaman yang relevan
       if (window.currentUser) {
@@ -582,7 +548,7 @@ tr:hover td{background:#fafbfe}
       <div id="adminLoginAlert"></div>
       <div class="form-group">
         <label>Username Admin</label>
-        <input type="text" id="al_user" placeholder="admin">
+        <input type="text" id="al_user" placeholder="Username">
       </div>
       <div class="form-group">
         <label>Password</label>
@@ -781,7 +747,7 @@ tr:hover td{background:#fafbfe}
       <button class="modal-close" onclick="closeModal('adminForgotPassModal'); closeMobileNav()">✕</button>
     </div>
     <div id="adminForgotAlert"></div>
-    <div class="alert alert-info"><div class="alert-icon">ℹ️</div><div>Link reset password akan dikirim ke email developer: <strong>twin.insani@gmail.com</strong></div></div>
+    <div class="alert alert-info"><div class="alert-icon">ℹ️</div><div>Link reset password akan dikirim ke email developer yang terdaftar.</div></div>
     <p style="font-size:13px;color:var(--text-2);margin-bottom:16px">Klik tombol di bawah untuk mengirim permintaan reset password. Developer akan membantu Anda memulihkan akses.</p>
     <button class="btn btn-primary btn-full" onclick="sendAdminForgotPass()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="#fff" stroke-width="2"/><polyline points="22,6 12,13 2,6" stroke="#fff" stroke-width="2"/></svg>
@@ -818,7 +784,7 @@ tr:hover td{background:#fafbfe}
 <script>
 // ====================== DATABASE (Firebase Realtime Database) ======================
 // DB adalah cache lokal yang di-sync dengan Firebase (diisi oleh module script di atas)
-if (!window.DB) window.DB = { schools:[], tickets:[], admin:{username:'admin',password:'admin123'} };
+if (!window.DB) window.DB = { schools:[], tickets:[], admin:{username:'admin',password:''} };
 
 function showLoadingOverlay(show){
   const el = document.getElementById('loadingOverlay');
@@ -855,6 +821,11 @@ let followUpPhotoFiles = [];
 // ====================== MOBILE NAVIGATION ======================
 function toggleMobileNav(){
   const mobileNav = document.getElementById('mobileNav');
+
+  if(mobileNav.style.display === 'none') {
+    mobileNav.style.display = '';
+  }
+
   const isOpen = mobileNav.classList.toggle('show');
   document.getElementById('iconHamburger').style.display = isOpen ? 'none' : 'block';
   document.getElementById('iconClose').style.display = isOpen ? 'block' : 'none';
@@ -907,13 +878,34 @@ function showPage(page){
 
 function logout(){
   currentUser = null;
+
+  // Reset UI user
   document.getElementById('navUser').style.display='none';
   document.getElementById('mobileMenuBtn').style.display='block';
-  
   document.getElementById('btnAdminChangePass').style.display='none';
-  // Reset all tab active states
+
+  // Reset semua tab
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  closeMobileNav();
+
+  // Reset mobile nav state total
+  const mobileNav = document.getElementById('mobileNav');
+  mobileNav.classList.remove('show');
+
+  document.getElementById('iconHamburger').style.display = 'block';
+  document.getElementById('iconClose').style.display = 'none';
+
+  // Force repaint (hindari bug klik)
+  mobileNav.style.display = 'none';
+  setTimeout(()=>{
+    mobileNav.style.display = '';
+  }, 50);
+
+  // Tutup semua modal
+  document.querySelectorAll('.modal-overlay').forEach(m=>{
+    m.classList.remove('show');
+  });
+
+  // Balik ke halaman awal
   showPage('reporter');
 }
 
@@ -1708,8 +1700,8 @@ function sendAdminForgotPass(){
     'Waktu permintaan: ' + new Date().toLocaleString('id-ID') + '\n\n' +
     'Mohon segera proses permintaan ini.\n\nTerima kasih.'
   );
-  window.location.href = `mailto:twin.insani@gmail.com?subject=${subject}&body=${body}`;
-  showAlert('adminForgotAlert','success','✅ Aplikasi email Anda akan terbuka untuk mengirim permintaan ke developer. Jika tidak terbuka otomatis, kirim email manual ke twin.insani@gmail.com');
+  window.location.href = `mailto:admin@silapor.id?subject=${subject}&body=${body}`;
+  showAlert('adminForgotAlert','success','✅ Aplikasi email Anda akan terbuka untuk mengirim permintaan ke developer.');
 }
 
 // ====================== INIT ======================
