@@ -1,6 +1,15 @@
-// script.js - Firebase Configuration & Database Functions
+// script.js - Firebase Configuration & Database Functions (Firestore)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, set, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import {
+  getFirestore,
+  doc,
+  collection,
+  setDoc,
+  getDoc,
+  getDocs,
+  updateDoc,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ============================================================
 // KONFIGURASI FIREBASE
@@ -8,7 +17,6 @@ import { getDatabase, ref, set, get, update, onValue } from "https://www.gstatic
 const firebaseConfig = {
   apiKey: "AIzaSyBK285KQJNJJvHQdTiXVY6B__jr6tWy_BE",
   authDomain: "silapor-57339.firebaseapp.com",
-  databaseURL: "https://silapor-57339-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "silapor-57339",
   storageBucket: "silapor-57339.firebasestorage.app",
   messagingSenderId: "234883893986",
@@ -16,7 +24,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+const db = getFirestore(app);
 
 // ============================================================
 // STRATEGI HEMAT BANDWIDTH - Strip foto dari cache list
@@ -30,111 +38,126 @@ function stripPhotos(t) {
   };
 }
 
-// Expose ke global scope untuk app.js
-window._firebaseDB = db;
-window._fbRef = ref;
-window._fbSet = set;
-window._fbGet = get;
-window._fbUpdate = update;
-window._fbOnValue = onValue;
-
-// Inisialisasi data awal
+// ============================================================
+// INISIALISASI DATA AWAL
+// ============================================================
 async function initFirebaseDB() {
   showLoadingOverlay(true);
   try {
-    const snapshot = await get(ref(db, '/'));
-    if (!snapshot.exists()) {
-      const initialData = {
-        schools: {},
-        tickets: {},
-        admin: { username: "admin", passwordHash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918" }
-      };
-      await set(ref(db, '/'), initialData);
+    // Cek apakah dokumen admin sudah ada
+    const adminSnap = await getDoc(doc(db, 'config', 'admin'));
+    if (!adminSnap.exists()) {
+      // Buat data awal jika belum ada
+      await setDoc(doc(db, 'config', 'admin'), {
+        username: "admin",
+        passwordHash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
+      });
     }
     await reloadDB();
-  } catch(e) {
-    console.error('Firebase init error:', e);
+  } catch (e) {
+    console.error('Firestore init error:', e);
     showDBError();
   }
   showLoadingOverlay(false);
 }
 
-// Load DB ringan ke cache lokal
-window.reloadDB = async function() {
+// ============================================================
+// LOAD DB RINGAN KE CACHE LOKAL
+// ============================================================
+window.reloadDB = async function () {
   try {
     const [schoolsSnap, adminSnap, ticketsSnap] = await Promise.all([
-      get(ref(db, 'schools')),
-      get(ref(db, 'admin')),
-      get(ref(db, 'tickets'))
+      getDocs(collection(db, 'schools')),
+      getDoc(doc(db, 'config', 'admin')),
+      getDocs(collection(db, 'tickets'))
     ]);
+
     window.DB = {
-      schools: schoolsSnap.exists() ? Object.values(schoolsSnap.val()) : [],
-      tickets: ticketsSnap.exists()
-        ? Object.values(ticketsSnap.val()).map(t => stripPhotos(t))
-        : [],
-      admin: adminSnap.exists() ? adminSnap.val() : { username: 'admin', passwordHash: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918' }
+      schools: schoolsSnap.empty
+        ? []
+        : schoolsSnap.docs.map(d => d.data()),
+      tickets: ticketsSnap.empty
+        ? []
+        : ticketsSnap.docs.map(d => stripPhotos(d.data())),
+      admin: adminSnap.exists()
+        ? adminSnap.data()
+        : { username: 'admin', passwordHash: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918' }
     };
-  } catch(e) {
+  } catch (e) {
     console.error('reloadDB error:', e);
   }
 };
 
-// Ambil SATU tiket lengkap (dengan foto) dari Firebase
-window.fbGetTicketFull = async function(id) {
+// ============================================================
+// AMBIL SATU TIKET LENGKAP (dengan foto) dari Firestore
+// ============================================================
+window.fbGetTicketFull = async function (id) {
   try {
-    const snap = await get(ref(db, 'tickets/' + id));
+    const snap = await getDoc(doc(db, 'tickets', id));
     if (snap.exists()) {
-      const t = snap.val();
+      const t = snap.data();
       return { ...t, photos: t.photos || [], followUpPhotos: t.followUpPhotos || [] };
     }
-  } catch(e) {
+  } catch (e) {
     console.error('fbGetTicketFull error:', e);
   }
   return null;
 };
 
-// Simpan schools ke Firebase
-window.fbSaveSchool = async function(school) {
-  await set(ref(db, 'schools/' + school.id), school);
+// ============================================================
+// SIMPAN / UPDATE DATA KE FIRESTORE
+// ============================================================
+
+// Simpan school ke Firestore
+window.fbSaveSchool = async function (school) {
+  await setDoc(doc(db, 'schools', school.id), school);
 };
 
-// Simpan ticket ke Firebase
-window.fbSaveTicket = async function(ticket) {
-  await set(ref(db, 'tickets/' + ticket.id), ticket);
+// Simpan ticket baru ke Firestore
+window.fbSaveTicket = async function (ticket) {
+  await setDoc(doc(db, 'tickets', ticket.id), ticket);
 };
 
 // Update sebagian field ticket
-window.fbUpdateTicket = async function(id, fields) {
-  await update(ref(db, 'tickets/' + id), fields);
+window.fbUpdateTicket = async function (id, fields) {
+  await updateDoc(doc(db, 'tickets', id), fields);
 };
 
-// Update admin
-window.fbSaveAdmin = async function(adminObj) {
-  await set(ref(db, 'admin'), adminObj);
+// Update admin (disimpan di koleksi config, dokumen admin)
+window.fbSaveAdmin = async function (adminObj) {
+  await setDoc(doc(db, 'config', 'admin'), adminObj);
 };
 
-// Update school
-window.fbUpdateSchool = async function(id, fields) {
-  await update(ref(db, 'schools/' + id), fields);
+// Update sebagian field school
+window.fbUpdateSchool = async function (id, fields) {
+  await updateDoc(doc(db, 'schools', id), fields);
 };
 
-// Realtime listener RINGAN
-let _schoolsUnsub = null, _ticketsUnsub = null;
+// ============================================================
+// REALTIME LISTENERS (onSnapshot)
+// ============================================================
+let _schoolsUnsub = null;
+let _ticketsUnsub = null;
 
 function startRealtimeListeners() {
+  // Hentikan listener lama jika ada
   if (_schoolsUnsub) _schoolsUnsub();
   if (_ticketsUnsub) _ticketsUnsub();
 
-  _schoolsUnsub = onValue(ref(db, 'schools'), (snap) => {
+  // Listener koleksi schools
+  _schoolsUnsub = onSnapshot(collection(db, 'schools'), (snap) => {
     if (!window.DB) return;
-    window.DB.schools = snap.exists() ? Object.values(snap.val()) : [];
+    window.DB.schools = snap.empty ? [] : snap.docs.map(d => d.data());
   });
 
-  _ticketsUnsub = onValue(ref(db, 'tickets'), (snap) => {
+  // Listener koleksi tickets (tanpa foto untuk hemat bandwidth)
+  _ticketsUnsub = onSnapshot(collection(db, 'tickets'), (snap) => {
     if (!window.DB) return;
-    window.DB.tickets = snap.exists()
-      ? Object.values(snap.val()).map(t => stripPhotos(t))
-      : [];
+    window.DB.tickets = snap.empty
+      ? []
+      : snap.docs.map(d => stripPhotos(d.data()));
+
+    // Re-render UI sesuai tipe user yang sedang login
     if (window.currentUser) {
       if (window.currentUser.type === 'school') {
         renderSchoolTickets && renderSchoolTickets();
@@ -149,7 +172,9 @@ function startRealtimeListeners() {
 
 window.startRealtimeListeners = startRealtimeListeners;
 
-// Jalankan inisialisasi
+// ============================================================
+// JALANKAN INISIALISASI SAAT DOM SIAP
+// ============================================================
 window.addEventListener('DOMContentLoaded', () => {
   initFirebaseDB().then(() => {
     startRealtimeListeners();
