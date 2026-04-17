@@ -51,6 +51,19 @@ let resetTargetNPSN = '';
 let photoFiles = [];
 let followUpPhotoFiles = [];
 
+// ====================== SECURITY: Session Timeout ======================
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+let sessionTimeoutId = null;
+
+// ====================== SECURITY: Login Attempt Limiter ======================
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes
+const LOGIN_ATTEMPTS_KEY = 'SiLaPorLoginAttempts';
+
+// ====================== SECURITY: Activity Log ======================
+const ACTIVITY_LOG_KEY = 'SiLaPorActivityLog';
+const MAX_LOG_ENTRIES = 100;
+
 async function hashPassword(password) {
   const data = new TextEncoder().encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -93,6 +106,7 @@ async function migrateAdminPasswordHash(admin) {
 function saveSessionUser(user) {
   try {
     sessionStorage.setItem('SiLaPorUser', JSON.stringify(user));
+    initSessionTimeout();
   } catch (e) {
     console.warn('Cannot save session user', e);
   }
@@ -101,6 +115,7 @@ function saveSessionUser(user) {
 function clearSessionUser() {
   try {
     sessionStorage.removeItem('SiLaPorUser');
+    clearSessionTimeout();
   } catch (e) {
     console.warn('Cannot clear session user', e);
   }
@@ -184,17 +199,157 @@ function restoreLoginState() {
     const school = DB.schools.find(s => s.id === session.schoolId);
     if (school) {
       applySchoolState(school);
+      recordActivity('SESSION_RESTORE', `School: ${school.name} (${school.id})`);
+      initSessionTimeout();
       return;
     }
   }
   if (session.type === 'admin') {
     if (DB.admin && DB.admin.username === session.username) {
       applyAdminState();
+      recordActivity('SESSION_RESTORE', `Admin: ${DB.admin.username}`);
+      initSessionTimeout();
       return;
     }
   }
   clearSessionUser();
   showPage('reporter');
+}
+
+// ====================== SECURITY: Session Timeout Functions ======================
+function initSessionTimeout() {
+  clearSessionTimeout();
+  // Auto-logout after inactivity
+  sessionTimeoutId = setTimeout(() => {
+    recordActivity('AUTO_LOGOUT', 'Session timeout setelah 30 menit inactivity');
+    logout();
+    showAlert('reporterAlert', 'warning', 'Sesi Anda telah berakhir karena inaktivitas. Silakan login kembali.');
+  }, SESSION_TIMEOUT_MS);
+  
+  // Reset timer on user activity
+  ['click', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+    document.addEventListener(event, resetSessionTimer, true);
+  });
+}
+
+function clearSessionTimeout() {
+  if (sessionTimeoutId) {
+    clearTimeout(sessionTimeoutId);
+    sessionTimeoutId = null;
+  }
+  ['click', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+    document.removeEventListener(event, resetSessionTimer, true);
+  });
+}
+
+function resetSessionTimer() {
+  if (!currentUser || !sessionTimeoutId) return;
+  clearSessionTimeout();
+  initSessionTimeout();
+}
+
+// ====================== SECURITY: Login Attempt Limiter ======================
+function recordLoginAttempt(identifier, success = false) {
+  try {
+    let attempts = JSON.parse(localStorage.getItem(LOGIN_ATTEMPTS_KEY) || '{}');
+    if (!attempts[identifier]) {
+      attempts[identifier] = { count: 0, firstAttemptTime: Date.now(), lockedUntil: null };
+    }
+    
+    if (!success) {
+      attempts[identifier].count += 1;
+      attempts[identifier].firstAttemptTime = Date.now();
+      
+      if (attempts[identifier].count >= MAX_LOGIN_ATTEMPTS) {
+        attempts[identifier].lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
+        recordActivity('LOGIN_LOCKED', `Identifier: ${identifier}`);
+      }
+    }
+    
+    localStorage.setItem(LOGIN_ATTEMPTS_KEY, JSON.stringify(attempts));
+  } catch (e) {
+    console.warn('Cannot record login attempt', e);
+  }
+}
+
+function clearLoginAttempts(identifier) {
+  try {
+    let attempts = JSON.parse(localStorage.getItem(LOGIN_ATTEMPTS_KEY) || '{}');
+    if (attempts[identifier]) {
+      delete attempts[identifier];
+      localStorage.setItem(LOGIN_ATTEMPTS_KEY, JSON.stringify(attempts));
+    }
+  } catch (e) {
+    console.warn('Cannot clear login attempts', e);
+  }
+}
+
+function isLoginLocked(identifier) {
+  try {
+    const attempts = JSON.parse(localStorage.getItem(LOGIN_ATTEMPTS_KEY) || '{}');
+    const record = attempts[identifier];
+    if (!record) return false;
+    
+    if (record.lockedUntil && Date.now() < record.lockedUntil) {
+      return true;
+    }
+    
+    // Reset if lockout period has expired
+    if (record.lockedUntil && Date.now() >= record.lockedUntil) {
+      clearLoginAttempts(identifier);
+      return false;
+    }
+    
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+function getLoginLockoutTimeRemaining(identifier) {
+  try {
+    const attempts = JSON.parse(localStorage.getItem(LOGIN_ATTEMPTS_KEY) || '{}');
+    const record = attempts[identifier];
+    if (!record || !record.lockedUntil) return 0;
+    
+    const remaining = record.lockedUntil - Date.now();
+    return remaining > 0 ? remaining : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+// ====================== SECURITY: Activity Logging ======================
+function recordActivity(action, details = '') {
+  try {
+    let logs = JSON.parse(localStorage.getItem(ACTIVITY_LOG_KEY) || '[]');
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      action: action,
+      details: details,
+      userType: currentUser ? currentUser.type : 'PUBLIC',
+      userId: currentUser ? (currentUser.type === 'school' ? currentUser.school.id : currentUser.username) : 'ANONYMOUS'
+    };
+    
+    logs.push(logEntry);
+    
+    // Keep only last 100 entries
+    if (logs.length > MAX_LOG_ENTRIES) {
+      logs = logs.slice(-MAX_LOG_ENTRIES);
+    }
+    
+    localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(logs));
+  } catch (e) {
+    console.warn('Cannot record activity', e);
+  }
+}
+
+function getActivityLog() {
+  try {
+    return JSON.parse(localStorage.getItem(ACTIVITY_LOG_KEY) || '[]');
+  } catch (e) {
+    return [];
+  }
 }
 
 // ====================== MOBILE NAVIGATION (Sidebar) ======================
@@ -239,6 +394,9 @@ function showPage(page) {
 }
 
 function logout() {
+  // Log activity
+  recordActivity('LOGOUT', currentUser ? (currentUser.type === 'school' ? currentUser.school.name : 'Admin') : 'Unknown');
+  
   currentUser = null;
   clearSessionUser();
 
@@ -491,11 +649,25 @@ function submitReport() {
 async function schoolLogin() {
   const npsn = document.getElementById('sl_npsn').value.trim();
   const pass = document.getElementById('sl_pass').value;
+  
+  // Check login attempts limiter
+  if (isLoginLocked(npsn)) {
+    const lockoutTime = getLoginLockoutTimeRemaining(npsn);
+    const minutes = Math.ceil(lockoutTime / 1000 / 60);
+    return showAlert('schoolLoginAlert', 'danger', `Terlalu banyak percobaan login. Coba lagi dalam ${minutes} menit.`);
+  }
+  
   const DB = loadDB();
   const school = DB.schools.find(s => s.id === npsn);
   if (!school || !(await verifyPassword(pass, school))) {
+    recordLoginAttempt(npsn, false);
     return showAlert('schoolLoginAlert', 'danger', 'NPSN atau password salah.');
   }
+  
+  // Clear login attempts on successful login
+  clearLoginAttempts(npsn);
+  recordActivity('LOGIN', `School: ${school.name} (${npsn})`);
+  
   await migrateSchoolPasswordHash(school);
   saveSessionUser({ type: 'school', schoolId: school.id });
   applySchoolState(school);
@@ -538,10 +710,25 @@ function filterSchoolTickets(status, btn) {
 async function adminLogin() {
   const user = document.getElementById('al_user').value.trim();
   const pass = document.getElementById('al_pass').value;
+  const lockoutKey = 'admin_' + user;
+  
+  // Check login attempts limiter
+  if (isLoginLocked(lockoutKey)) {
+    const lockoutTime = getLoginLockoutTimeRemaining(lockoutKey);
+    const minutes = Math.ceil(lockoutTime / 1000 / 60);
+    return showAlert('adminLoginAlert', 'danger', `Terlalu banyak percobaan login. Coba lagi dalam ${minutes} menit.`);
+  }
+  
   const DB = loadDB();
   if (user !== DB.admin.username || !(await verifyPassword(pass, DB.admin))) {
+    recordLoginAttempt(lockoutKey, false);
     return showAlert('adminLoginAlert', 'danger', 'Username atau password admin salah.');
   }
+  
+  // Clear login attempts on successful login
+  clearLoginAttempts(lockoutKey);
+  recordActivity('LOGIN', `Admin: ${user}`);
+  
   await migrateAdminPasswordHash(DB.admin);
   saveSessionUser({ type: 'admin', username: DB.admin.username });
   applyAdminState();
@@ -815,7 +1002,8 @@ async function importFromGoogleSheet() {
     }
     
     const csvText = await response.text();
-    const rows = csvText.split('\\n').map(row => {
+    const rows = csvText.split('\
+').map(row => {
       // Parse CSV dengan benar (handle quotes)
       const regex = /(?:[^,\"]+|\"[^\"]*\")+/g;
       return row.match(regex)?.map(cell => cell.replace(/^\"|\"$/g, '').trim()) || [];
@@ -861,7 +1049,8 @@ async function importFromGoogleSheet() {
   } catch (err) {
     if (loadingDiv) loadingDiv.style.display = 'none';
     console.error('Error importing from Google Sheet:', err);
-    alert('Gagal membaca Google Sheet:\\n' + err.message);
+    alert('Gagal membaca Google Sheet:\
+' + err.message);
   }
 }
 
@@ -1314,23 +1503,6 @@ async function saveAdminPassword() {
   if (window.fbSaveAdmin) await window.fbSaveAdmin({ username: DB.admin.username, passwordHash: hash });
   closeModal('adminChangePassModal');
   alert('Password administrator berhasil diperbarui!');
-}
-
-// ====================== ADMIN FORGOT PASSWORD ======================
-function openAdminForgotPass() {
-  document.getElementById('adminForgotAlert').innerHTML = '';
-  openModal('adminForgotPassModal');
-}
-
-function sendAdminForgotPass() {
-  const subject = encodeURIComponent('[SiLaPor] Permintaan Reset Password Administrator');
-  const body = encodeURIComponent(
-    'Halo Developer,\n\nTerdapat permintaan reset password untuk akun Administrator SiLaPor.\n\n' +
-    'Waktu permintaan: ' + new Date().toLocaleString('id-ID') + '\n\n' +
-    'Mohon segera proses permintaan ini.\n\nTerima kasih.'
-  );
-  window.location.href = `mailto:developer@silapor.id?subject=${subject}&body=${body}`;
-  showAlert('adminForgotAlert', 'success', 'Aplikasi email Anda akan terbuka untuk mengirim permintaan reset ke developer.');
 }
 
 // ====================== INIT ======================
