@@ -96,18 +96,31 @@ function loadSessionUser() {
   }
 }
 
+function _getInitials(name) {
+  return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+}
+
 function applySchoolState(school) {
   if (!school) return;
   currentUser = { type: 'school', school };
-  document.getElementById('mobileMenuBtn').style.display = 'none';
-  const mobileNav = document.getElementById('mobileNav');
-  mobileNav.classList.remove('show');
-  mobileNav.style.display = '';
-  document.getElementById('navUser').style.display = 'flex';
-  document.getElementById('navUserName').textContent = school.name;
+
+  document.getElementById('sidebarPublicNav').classList.add('hidden');
+  document.getElementById('sidebarSchoolNav').classList.remove('hidden');
+  document.getElementById('sidebarAdminNav').classList.add('hidden');
+
+  const initials = _getInitials(school.name);
+  document.getElementById('sidebarUserAvatar').textContent = initials;
+  document.getElementById('sidebarUserName').textContent = school.name;
+  document.getElementById('sidebarUserRole').textContent = 'NPSN: ' + school.id;
+  document.getElementById('sidebarUser').classList.remove('hidden');
+  document.getElementById('sidebarActions').classList.remove('hidden');
+  document.getElementById('sidebarBtnChangePass').style.display = 'none';
+
+  document.getElementById('topbarUserAvatar').textContent = initials;
+  document.getElementById('topbarUser').classList.remove('hidden');
+
   document.getElementById('schoolDashName').textContent = school.name;
   document.getElementById('schoolDashNPSN').textContent = 'NPSN: ' + school.id;
-  document.getElementById('btnAdminChangePass').style.display = 'none';
   if (school.firstLogin) {
     document.getElementById('firstLoginBanner').classList.remove('hidden');
   } else {
@@ -121,13 +134,21 @@ function applySchoolState(school) {
 
 function applyAdminState() {
   currentUser = { type: 'admin' };
-  document.getElementById('mobileMenuBtn').style.display = 'none';
-  const mobileNav = document.getElementById('mobileNav');
-  mobileNav.classList.remove('show');
-  mobileNav.style.display = '';
-  document.getElementById('navUser').style.display = 'flex';
-  document.getElementById('navUserName').textContent = 'Administrator';
-  document.getElementById('btnAdminChangePass').style.display = 'inline-block';
+
+  document.getElementById('sidebarPublicNav').classList.add('hidden');
+  document.getElementById('sidebarSchoolNav').classList.add('hidden');
+  document.getElementById('sidebarAdminNav').classList.remove('hidden');
+
+  document.getElementById('sidebarUserAvatar').textContent = 'AD';
+  document.getElementById('sidebarUserName').textContent = 'Administrator';
+  document.getElementById('sidebarUserRole').textContent = 'Akses Penuh';
+  document.getElementById('sidebarUser').classList.remove('hidden');
+  document.getElementById('sidebarActions').classList.remove('hidden');
+  document.getElementById('sidebarBtnChangePass').style.display = 'flex';
+
+  document.getElementById('topbarUserAvatar').textContent = 'AD';
+  document.getElementById('topbarUser').classList.remove('hidden');
+
   showPage('admin-dash');
   updateAdminStats();
   renderAdminRecent();
@@ -157,31 +178,30 @@ function restoreLoginState() {
   showPage('reporter');
 }
 
-// ====================== MOBILE NAVIGATION ======================
+// ====================== MOBILE NAVIGATION (Sidebar) ======================
 function toggleMobileNav() {
-  const mobileNav = document.getElementById('mobileNav');
-  const isOpen = mobileNav.classList.toggle('show');
-  document.getElementById('iconHamburger').style.display = isOpen ? 'none' : 'block';
-  document.getElementById('iconClose').style.display = isOpen ? 'block' : 'none';
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const isOpen = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', isOpen);
 }
 
 function closeMobileNav() {
-  const mobileNav = document.getElementById('mobileNav');
-  mobileNav.classList.remove('show');
-  document.getElementById('iconHamburger').style.display = 'block';
-  document.getElementById('iconClose').style.display = 'none';
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  sidebar.classList.remove('open');
+  backdrop.classList.remove('show');
 }
-
-document.addEventListener('click', function(e) {
-  const mobileNav = document.getElementById('mobileNav');
-  const menuBtn = document.getElementById('mobileMenuBtn');
-  if (mobileNav.classList.contains('show') && !mobileNav.contains(e.target) && !menuBtn.contains(e.target)) {
-    closeMobileNav();
-  }
-});
 
 // ====================== NAVIGATION ======================
 const PROTECTED_PAGES = ['school-dash', 'admin-dash'];
+
+function updateSidebarActive(page) {
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+  const id = 'snav-' + page;
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
 
 function showPage(page) {
   closeMobileNav();
@@ -190,13 +210,7 @@ function showPage(page) {
   }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
-
-  const publicMap = { 'reporter': 0, 'tracking': 1, 'school-login': 2, 'admin-login': 3 };
-  const mobileTabs = document.querySelectorAll('#mobileNav .nav-tab');
-  mobileTabs.forEach(t => t.classList.remove('active'));
-  if (publicMap[page] !== undefined && mobileTabs[publicMap[page]]) {
-    mobileTabs[publicMap[page]].classList.add('active');
-  }
+  updateSidebarActive(page);
 
   if (page !== 'reporter') {
     captchaVerified = false;
@@ -208,10 +222,15 @@ function showPage(page) {
 function logout() {
   currentUser = null;
   clearSessionUser();
-  document.getElementById('navUser').style.display = 'none';
-  document.getElementById('mobileMenuBtn').style.display = 'block';
-  document.getElementById('btnAdminChangePass').style.display = 'none';
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+
+  // Restore public sidebar nav
+  document.getElementById('sidebarPublicNav').classList.remove('hidden');
+  document.getElementById('sidebarSchoolNav').classList.add('hidden');
+  document.getElementById('sidebarAdminNav').classList.add('hidden');
+  document.getElementById('sidebarUser').classList.add('hidden');
+  document.getElementById('sidebarActions').classList.add('hidden');
+  document.getElementById('topbarUser').classList.add('hidden');
+
   closeMobileNav();
   showPage('reporter');
 }
@@ -975,6 +994,11 @@ function sendAdminForgotPass() {
 }
 
 // ====================== INIT ======================
+window.restoreLoginState = restoreLoginState;
+window.renderSchoolTickets = typeof renderSchoolTickets !== 'undefined' ? renderSchoolTickets : undefined;
+window.updateSchoolStats = typeof updateSchoolStats !== 'undefined' ? updateSchoolStats : undefined;
+window.updateAdminStats = typeof updateAdminStats !== 'undefined' ? updateAdminStats : undefined;
+window.renderAdminRecent = typeof renderAdminRecent !== 'undefined' ? renderAdminRecent : undefined;
 genCaptcha();
 document.getElementById('captchaAns').addEventListener('keyup', function(e) {
   if (e.key === 'Enter') checkCaptchaAuto();
