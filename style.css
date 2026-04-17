@@ -251,7 +251,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  order: -1;
+  order: 1;
 }
 
 .nav-menu-btn {
@@ -262,14 +262,13 @@ body {
   padding: 6px;
   border-radius: 6px;
   flex-shrink: 0;
-  order: 1;
+  order: 2;
 }
 .nav-menu-btn:hover { background: rgba(255,255,255,0.15); }
 
 .topbar-user {
   display: flex;
   align-items: center;
-  order: 2;
 }
 
 .topbar-avatar {
@@ -872,6 +871,7 @@ tr:hover td { background: #fafbfe }
   }
   .sidebar-close-btn { display: flex; }
   .topbar { display: flex; }
+  .topbar-user { display: none; }
   .main-content {
     margin-right: 0;
     padding-top: 52px;
