@@ -1,5 +1,24 @@
 // app.js - Application Logic (Regular Script, defer)
 
+// SVG Icon Helper Functions
+const SVGIcons = {
+  send: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
+  search: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>',
+  lock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>',
+  envelope: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/></svg>',
+  save: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+  info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+  edit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  clipboard: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>',
+  user: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  phone: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/></svg>',
+  building: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>',
+  x: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  gear: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 0l4.24-4.24M1 12h6m6 0h6m-17.78 7.78l4.24-4.24m5.08 0l4.24 4.24"/></svg>',
+  clock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+};
+
 // Database wrapper
 if (!window.DB) window.DB = { schools: [], tickets: [], admin: { username: 'admin', passwordHash: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918' } };
 
@@ -252,12 +271,12 @@ function checkCaptchaAuto() {
   const statusEl = document.getElementById('captchaStatus');
   if (ans === captchaA + captchaB) {
     captchaVerified = true;
-    statusEl.textContent = '✅ Verifikasi berhasil!';
+    statusEl.innerHTML = SVGIcons.check + ' Verifikasi berhasil!';
     statusEl.style.color = 'var(--success)';
     document.getElementById('captchaAns').style.borderColor = 'var(--success)';
   } else if (document.getElementById('captchaAns').value.length > 0) {
     captchaVerified = false;
-    statusEl.textContent = '❌ Jawaban salah';
+    statusEl.innerHTML = SVGIcons.x + ' Jawaban salah';
     statusEl.style.color = 'var(--danger)';
     document.getElementById('captchaAns').style.borderColor = 'var(--danger)';
   } else {
@@ -392,7 +411,7 @@ function handlePhotos(inp) {
     if (el && el !== inp) el.value = '';
   });
   const prev = document.getElementById('photoPreview');
-  prev.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:12px;color:var(--text-3);font-size:13px">⏳ Mengompresi foto...</div>';
+  prev.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:12px;color:var(--text-3);font-size:13px">Mengompresi foto...</div>';
 
   compressImages(files, 100).then(compressedDataUrls => {
     photoFiles = compressedDataUrls;
@@ -404,7 +423,7 @@ function handlePhotos(inp) {
       prev.appendChild(img);
     });
   }).catch(() => {
-    prev.innerHTML = '<div style="grid-column:1/-1;color:var(--danger);font-size:13px">❌ Gagal memproses foto. Coba lagi.</div>';
+    prev.innerHTML = '<div style="grid-column:1/-1;color:var(--danger);font-size:13px;display:flex;align-items:center;gap:6px">' + SVGIcons.x + ' Gagal memproses foto. Coba lagi.</div>';
   });
 }
 
@@ -459,7 +478,7 @@ function submitReport() {
 
     submitBtn.disabled = false;
     submitBtn.innerHTML = '📤 Kirim Laporan';
-    showAlert('reporterAlert', 'success', `✅ Laporan berhasil dikirim! Nomor Tiket Anda: <strong>${id}</strong>.`);
+    showAlert('reporterAlert', 'success', `Laporan berhasil dikirim! Nomor Tiket Anda: <strong>${id}</strong>.`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }).catch(() => {
     submitBtn.disabled = false;
@@ -566,7 +585,10 @@ function renderSchoolTable() {
       <td><span class="badge badge-new">${s.level}</span></td>
       <td>${s.city}</td>
       <td>${cnt}</td>
-      <td><button class="btn btn-sm btn-outline" onclick="openResetPass('${s.id}','${s.name.replace(/'/g, '\\\'')}')" style="font-size:12px">Reset Pass</button></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-outline" onclick="openEditSchool('${s.id}')" style="font-size:12px">Edit</button>
+        <button class="btn btn-sm btn-outline" onclick="openResetPass('${s.id}','${s.name.replace(/'/g, '\\\'')}')" style="font-size:12px">Reset Pass</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -623,6 +645,324 @@ async function addSchool() {
   alert('Sekolah berhasil ditambahkan! NPSN: ' + npsn);
 }
 
+// Global variable to store excel data
+let excelDataToImport = [];
+
+function downloadExcelTemplate() {
+  if (typeof XLSX === 'undefined') {
+    alert('Library XLSX tidak terload. Silakan refresh halaman.');
+    return;
+  }
+  
+  try {
+    const ws_data = [
+      ['NPSN', 'Nama Sekolah', 'Jenjang', 'Kota', 'Password (Opsional)'],
+      ['12345678', 'SD Maju Jaya', 'SD', 'Jakarta', ''],
+      ['87654321', 'SMP Pintar', 'SMP', 'Bandung', 'sandi123'],
+      ['11223344', 'SMA Berprestasi', 'SMA', 'Surabaya', '']
+    ];
+    
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    ws['!cols'] = [
+      { wch: 12 },
+      { wch: 30 },
+      { wch: 10 },
+      { wch: 15 },
+      { wch: 20 }
+    ];
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sekolah');
+    
+    const fileName = 'Template_Import_Sekolah.xlsx';
+    XLSX.writeFile(wb, fileName);
+  } catch (err) {
+    console.error('Error generating template:', err);
+    alert('Gagal membuat template: ' + err.message);
+  }
+}
+
+function previewExcelData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      
+      if (rows.length < 2) {
+        alert('File Excel kosong atau tidak memiliki data');
+        return;
+      }
+      
+      // Skip header row
+      const dataRows = rows.slice(1).filter(row => row[0] && row[1]);
+      excelDataToImport = [];
+      let html = '';
+      
+      dataRows.forEach((row, idx) => {
+        const npsn = String(row[0]).trim();
+        const name = String(row[1]).trim();
+        const level = String(row[2]).trim() || 'SD';
+        const city = String(row[3]).trim();
+        const password = row[4] ? String(row[4]).trim() : '';
+        
+        // Validate NPSN
+        if (npsn.length !== 8 || isNaN(npsn)) {
+          html += `<tr style="background:var(--danger-pale);opacity:0.6"><td>${npsn}</td><td>${name}</td><td>${level}</td><td>${city}</td><td>${password || '(NPSN)'}</td></tr>`;
+          return;
+        }
+        
+        excelDataToImport.push({ npsn, name, level, city, password });
+        html += `<tr><td><code style="background:var(--neutral);padding:2px 6px;border-radius:4px;font-size:12px">${npsn}</code></td><td>${name}</td><td><span class="badge badge-new">${level}</span></td><td>${city}</td><td>${password || '(NPSN)'}</td></tr>`;
+      });
+      
+      document.getElementById('excelTableBody').innerHTML = html;
+      document.getElementById('excelPreview').style.display = 'block';
+    } catch (err) {
+      alert('Gagal membaca file Excel: ' + err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function importExcelData() {
+  if (excelDataToImport.length === 0) {
+    alert('Tidak ada data valid untuk diimport');
+    return;
+  }
+  
+  const DB = loadDB();
+  let successCount = 0;
+  let duplicateCount = 0;
+  
+  for (const schoolData of excelDataToImport) {
+    // Check if school already exists
+    if (DB.schools.find(s => s.id === schoolData.npsn)) {
+      duplicateCount++;
+      continue;
+    }
+    
+    const defaultPassword = schoolData.password || schoolData.npsn;
+    const passwordHash = await hashPassword(defaultPassword);
+    const newSchool = {
+      id: schoolData.npsn,
+      name: schoolData.name,
+      level: schoolData.level,
+      city: schoolData.city,
+      passwordHash,
+      firstLogin: true
+    };
+    
+    DB.schools.push(newSchool);
+    if (window.fbSaveSchool) await window.fbSaveSchool(newSchool);
+    successCount++;
+  }
+  
+  cancelExcelImport();
+  renderSchoolTable();
+  
+  let message = `✓ ${successCount} sekolah berhasil diimport`;
+  if (duplicateCount > 0) message += ` (${duplicateCount} data duplikat dilewati)`;
+  alert(message);
+}
+
+function cancelExcelImport() {
+  document.getElementById('excelFileInput').value = '';
+  document.getElementById('excelPreview').style.display = 'none';
+  document.getElementById('excelTableBody').innerHTML = '';
+  excelDataToImport = [];
+}
+
+// ====================== GOOGLE SHEETS IMPORT ======================
+let googleSheetDataToImport = [];
+
+function parseGoogleSheetUrl(input) {
+  const url = input.trim();
+  // Extract Sheet ID from URL
+  const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : null;
+}
+
+async function importFromGoogleSheet() {
+  const sheetUrlInput = document.getElementById('googleSheetUrl').value.trim();
+  if (!sheetUrlInput) {
+    alert('Masukkan URL Google Sheet atau Sheet ID');
+    return;
+  }
+  
+  const sheetId = parseGoogleSheetUrl(sheetUrlInput);
+  if (!sheetId) {
+    alert('URL Google Sheet tidak valid. Gunakan format: https://docs.google.com/spreadsheets/d/SHEET_ID/edit');
+    return;
+  }
+  
+  try {
+    const loadingDiv = document.getElementById('googleSheetLoading');
+    if (loadingDiv) loadingDiv.style.display = 'block';
+    
+    // Fetch dari CSV export (tidak perlu API key)
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+    const response = await fetch(csvUrl);
+    
+    if (!response.ok) {
+      throw new Error('Google Sheet tidak ditemukan atau tidak dapat diakses. Pastikan sheet sudah di-share dengan "Siapa saja dapat melihat".');
+    }
+    
+    const csvText = await response.text();
+    const rows = csvText.split('\\n').map(row => {
+      // Parse CSV dengan benar (handle quotes)
+      const regex = /(?:[^,\"]+|\"[^\"]*\")+/g;
+      return row.match(regex)?.map(cell => cell.replace(/^\"|\"$/g, '').trim()) || [];
+    }).filter(row => row.some(cell => cell)); // Filter empty rows
+    
+    if (rows.length < 2) {
+      throw new Error('Google Sheet kosong atau hanya memiliki header');
+    }
+    
+    // Parse data mulai dari row 2 (skip header)
+    const dataRows = rows.slice(1);
+    googleSheetDataToImport = [];
+    let html = '';
+    let validCount = 0;
+    
+    dataRows.forEach((row, idx) => {
+      const npsn = String(row[0] || '').trim();
+      const name = String(row[1] || '').trim();
+      const level = String(row[2] || 'SD').trim();
+      const city = String(row[3] || '').trim();
+      const password = String(row[4] || '').trim();
+      
+      // Validate NPSN
+      if (!npsn || npsn.length !== 8 || isNaN(npsn)) {
+        html += `<tr style=\"background:var(--danger-pale);opacity:0.6\"><td>${npsn || '(kosong)'}</td><td>${name || '(kosong)'}</td><td>${level}</td><td>${city || '(kosong)'}</td><td>${password || '(NPSN)'}</td></tr>`;
+        return;
+      }
+      
+      googleSheetDataToImport.push({ npsn, name, level, city, password });
+      validCount++;
+      html += `<tr><td><code style=\"background:var(--neutral);padding:2px 6px;border-radius:4px;font-size:12px\">${npsn}</code></td><td>${name}</td><td><span class=\"badge badge-new\">${level}</span></td><td>${city}</td><td>${password || '(NPSN)'}</td></tr>`;
+    });
+    
+    if (validCount === 0) {
+      throw new Error('Tidak ada data valid yang ditemukan. Pastikan format: NPSN (8 digit) | Nama | Jenjang | Kota | Password');
+    }
+    
+    document.getElementById('googleSheetTableBody').innerHTML = html;
+    document.getElementById('googleSheetPreview').style.display = 'block';
+    document.getElementById('googleSheetUrl').value = '';
+    
+    if (loadingDiv) loadingDiv.style.display = 'none';
+  } catch (err) {
+    if (loadingDiv) loadingDiv.style.display = 'none';
+    console.error('Error importing from Google Sheet:', err);
+    alert('Gagal membaca Google Sheet:\\n' + err.message);
+  }
+}
+
+async function confirmGoogleSheetImport() {
+  if (googleSheetDataToImport.length === 0) {
+    alert('Tidak ada data untuk diimport');
+    return;
+  }
+  
+  const DB = loadDB();
+  let successCount = 0;
+  let duplicateCount = 0;
+  
+  for (const schoolData of googleSheetDataToImport) {
+    if (DB.schools.find(s => s.id === schoolData.npsn)) {
+      duplicateCount++;
+      continue;
+    }
+    
+    const defaultPassword = schoolData.password || schoolData.npsn;
+    const passwordHash = await hashPassword(defaultPassword);
+    const newSchool = {
+      id: schoolData.npsn,
+      name: schoolData.name,
+      level: schoolData.level,
+      city: schoolData.city,
+      passwordHash,
+      firstLogin: true
+    };
+    
+    DB.schools.push(newSchool);
+    if (window.fbSaveSchool) await window.fbSaveSchool(newSchool);
+    successCount++;
+  }
+  
+  cancelGoogleSheetImport();
+  renderSchoolTable();
+  
+  let message = `✓ ${successCount} sekolah berhasil diimport dari Google Sheet`;
+  if (duplicateCount > 0) message += ` (${duplicateCount} data duplikat dilewati)`;
+  alert(message);
+}
+
+function cancelGoogleSheetImport() {
+  document.getElementById('googleSheetUrl').value = '';
+  document.getElementById('googleSheetPreview').style.display = 'none';
+  document.getElementById('googleSheetTableBody').innerHTML = '';
+  document.getElementById('googleSheetLoading').style.display = 'none';
+  googleSheetDataToImport = [];
+}
+
+function openEditSchool(npsn) {
+  const DB = loadDB();
+  const school = DB.schools.find(s => s.id === npsn);
+  if (!school) return alert('Sekolah tidak ditemukan');
+  
+  document.getElementById('e_npsn').value = school.id;
+  document.getElementById('e_npsn').disabled = true;
+  document.getElementById('e_sname').value = school.name;
+  document.getElementById('e_level').value = school.level;
+  document.getElementById('e_city').value = school.city;
+  
+  document.getElementById('editSchoolModal').classList.add('show');
+}
+
+function closeEditSchool() {
+  document.getElementById('editSchoolModal').classList.remove('show');
+}
+
+async function saveEditSchool() {
+  const npsn = document.getElementById('e_npsn').value.trim();
+  const name = document.getElementById('e_sname').value.trim();
+  const level = document.getElementById('e_level').value;
+  const city = document.getElementById('e_city').value.trim();
+  
+  if (!name) return alert('Nama sekolah wajib diisi');
+  if (!level) return alert('Jenjang wajib diisi');
+  if (!city) return alert('Kota/Kabupaten wajib diisi');
+  
+  const DB = loadDB();
+  const schoolIndex = DB.schools.findIndex(s => s.id === npsn);
+  if (schoolIndex === -1) return alert('Sekolah tidak ditemukan');
+  
+  const updatedSchool = {
+    ...DB.schools[schoolIndex],
+    name,
+    level,
+    city
+  };
+  
+  DB.schools[schoolIndex] = updatedSchool;
+  
+  if (window.fbUpdateSchool) {
+    await window.fbUpdateSchool(npsn, { name, level, city });
+  }
+  
+  closeEditSchool();
+  renderSchoolTable();
+  alert('Data sekolah berhasil diperbarui!');
+}
+
 // ====================== TICKET CARD ======================
 function ticketCard(t, isSchool) {
   const statusClass = t.status === 'Baru' ? 'badge-new' : t.status === 'Dalam Proses' ? 'badge-process' : 'badge-done';
@@ -637,11 +977,11 @@ function ticketCard(t, isSchool) {
     </div>
     <div class="ticket-body">${t.desc.substring(0, 120)}${t.desc.length > 120 ? '...' : ''}</div>
     <div class="ticket-meta">
-      <span>👤 ${t.reporter}</span>
-      ${t.wa ? `<span>📱 ${t.wa}</span>` : ''}
-      ${!isSchool ? `<span>🏫 ${t.schoolName}</span>` : ''}
+      <span>${SVGIcons.user} ${t.reporter}</span>
+      ${t.wa ? `<span>${SVGIcons.phone} ${t.wa}</span>` : ''}
+      ${!isSchool ? `<span>${SVGIcons.building} ${t.schoolName}</span>` : ''}
     </div>
-    ${t.notes ? `<div style="margin-top:8px;font-size:12px;background:var(--success-pale);padding:6px 10px;border-radius:6px;color:var(--success)">📋 ${t.notes}</div>` : ''}
+    ${t.notes ? `<div style="margin-top:8px;font-size:12px;background:var(--success-pale);padding:6px 10px;border-radius:6px;color:var(--success);display:flex;align-items:center;gap:6px">${SVGIcons.clipboard} ${t.notes}</div>` : ''}
     ${isSchool ? `
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm btn-outline" onclick="openTicket('${t.id}',${isSchool})">Lihat Detail</button>
@@ -658,7 +998,7 @@ function ticketCard(t, isSchool) {
 
 function openTicket(id, isSchool) {
   document.getElementById('modalTicketId').textContent = 'Memuat detail...';
-  document.getElementById('modalTicketContent').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-3)">⏳ Memuat data laporan...</div>';
+  document.getElementById('modalTicketContent').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-3)">Memuat data laporan...</div>';
   openModal('ticketModal');
 
   const fetchAndRender = async () => {
@@ -668,7 +1008,7 @@ function openTicket(id, isSchool) {
       const DB = loadDB();
       t = DB.tickets.find(x => x.id === id);
       if (!t) {
-        document.getElementById('modalTicketContent').innerHTML = '<div class="alert alert-danger"><div class="alert-icon">❌</div><div>Gagal memuat data laporan.</div></div>';
+        document.getElementById('modalTicketContent').innerHTML = '<div class="alert alert-danger"><div class="alert-icon">' + SVGIcons.x + '</div><div>Gagal memuat data laporan.</div></div>';
         return;
       }
       t = { ...t, photos: [], followUpPhotos: [] };
@@ -722,7 +1062,7 @@ function openTicket(id, isSchool) {
         </div>
       </div>
       ${t.notes ? `<div style="background:var(--success-pale);border-radius:8px;padding:12px 16px;margin-bottom:12px;border:1px solid #a9dfbf">
-        <div style="font-size:12px;color:var(--success);font-weight:600;margin-bottom:4px">📋 Catatan Tindak Lanjut</div>
+        <div style="font-size:12px;color:var(--success);font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px">${SVGIcons.clipboard} Catatan Tindak Lanjut</div>
         <div style="font-size:13px;color:var(--text)">${t.notes}</div>
         ${followUpPhotosHTML}
       </div>` : (followUpPhotosHTML ? `<div style="margin-bottom:12px">${followUpPhotosHTML}</div>` : '')}
@@ -852,7 +1192,7 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 function showAlert(elId, type, msg) {
   const el = document.getElementById(elId);
   if (!el) return;
-  el.innerHTML = `<div class="alert alert-${type}"><div class="alert-icon">${type === 'success' ? '✅' : type === 'danger' ? '❌' : 'ℹ️'}</div><div>${msg}</div></div>`;
+  el.innerHTML = `<div class="alert alert-${type}"><div class="alert-icon">${type === 'success' ? SVGIcons.check : type === 'danger' ? SVGIcons.x : SVGIcons.info}</div><div>${msg}</div></div>`;
   const delay = type === 'success' ? 8000 : 12000;
   setTimeout(() => { el.innerHTML = ''; }, delay);
 }
@@ -867,7 +1207,7 @@ function handleFollowUpPhotos(inp) {
   });
   const prev = document.getElementById('followUpPreview');
   if (!prev) return;
-  prev.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:10px;color:var(--text-3);font-size:13px">⏳ Mengompresi foto...</div>';
+  prev.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:10px;color:var(--text-3);font-size:13px">Mengompresi foto...</div>';
 
   compressImages(files, 100).then(compressedDataUrls => {
     followUpPhotoFiles = compressedDataUrls;
@@ -888,7 +1228,7 @@ async function trackReport() {
   const id = document.getElementById('trackInput').value.trim().toUpperCase();
   const el = document.getElementById('trackResult');
   if (!id) { el.innerHTML = '<div class="alert alert-warning"><div class="alert-icon">⚠️</div><div>Masukkan nomor tiket terlebih dahulu.</div></div>'; return; }
-  el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-3)">⏳ Mencari laporan...</div>';
+  el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-3)">Mencari laporan...</div>';
 
   let t = null;
   if (window.fbGetTicketFull) t = await window.fbGetTicketFull(id);
@@ -897,11 +1237,11 @@ async function trackReport() {
     const cached = DB.tickets.find(x => x.id === id);
     if (cached) t = { ...cached, photos: [], followUpPhotos: [] };
   }
-  if (!t) { el.innerHTML = `<div class="alert alert-danger"><div class="alert-icon">❌</div><div>Nomor tiket <strong>${id}</strong> tidak ditemukan.</div></div>`; return; }
+  if (!t) { el.innerHTML = `<div class="alert alert-danger"><div class="alert-icon">${SVGIcons.x}</div><div>Nomor tiket <strong>${id}</strong> tidak ditemukan.</div></div>`; return; }
 
   const date = new Date(t.date).toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   const statusClass = t.status === 'Baru' ? 'badge-new' : t.status === 'Dalam Proses' ? 'badge-process' : 'badge-done';
-  const statusIcon = t.status === 'Baru' ? '🆕' : t.status === 'Dalam Proses' ? '⚙️' : '✅';
+  const statusIcon = t.status === 'Baru' ? '<span style="font-size:11px;font-weight:bold;color:var(--primary)">NEW</span>' : t.status === 'Dalam Proses' ? SVGIcons.gear : SVGIcons.check;
   const steps = [
     { label: 'Laporan Dikirim', done: true },
     { label: 'Diterima Sekolah', done: t.status !== 'Baru' },
@@ -945,10 +1285,10 @@ async function trackReport() {
       </div>
       ${photosHTML}
       ${t.notes ? `<div style="background:var(--success-pale);border-radius:8px;padding:12px;border:1px solid #a9dfbf">
-        <div style="font-size:11px;color:var(--success);font-weight:600;margin-bottom:4px">📋 Tindak Lanjut Sekolah</div>
+        <div style="font-size:11px;color:var(--success);font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px">${SVGIcons.clipboard} Tindak Lanjut Sekolah</div>
         <div style="font-size:13px;color:var(--text)">${t.notes}</div>
         ${followUpPhotosHTML}
-      </div>` : '<div style="background:var(--warning-pale);border-radius:8px;padding:12px;border:1px solid #f9e79f;font-size:13px;color:var(--warning)">⏳ Laporan Anda sedang menunggu tindak lanjut dari pihak sekolah.</div>'}
+      </div>` : '<div style="background:var(--warning-pale);border-radius:8px;padding:12px;border:1px solid #f9e79f;font-size:13px;color:var(--warning)">Laporan Anda sedang menunggu tindak lanjut dari pihak sekolah.</div>'}}
     </div>`;
 }
 
@@ -973,7 +1313,7 @@ async function saveAdminPassword() {
   DB.admin.passwordHash = hash;
   if (window.fbSaveAdmin) await window.fbSaveAdmin({ username: DB.admin.username, passwordHash: hash });
   closeModal('adminChangePassModal');
-  alert('✅ Password administrator berhasil diperbarui!');
+  alert('Password administrator berhasil diperbarui!');
 }
 
 // ====================== ADMIN FORGOT PASSWORD ======================
@@ -990,7 +1330,7 @@ function sendAdminForgotPass() {
     'Mohon segera proses permintaan ini.\n\nTerima kasih.'
   );
   window.location.href = `mailto:developer@silapor.id?subject=${subject}&body=${body}`;
-  showAlert('adminForgotAlert', 'success', '✅ Aplikasi email Anda akan terbuka untuk mengirim permintaan reset ke developer.');
+  showAlert('adminForgotAlert', 'success', 'Aplikasi email Anda akan terbuka untuk mengirim permintaan reset ke developer.');
 }
 
 // ====================== INIT ======================

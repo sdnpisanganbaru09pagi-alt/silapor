@@ -211,7 +211,7 @@
       </div>
     </div>
 
-    <button class="btn btn-primary btn-full" onclick="submitReport()">📤 Kirim Laporan</button>
+    <button class="btn btn-primary btn-full" onclick="submitReport()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;margin-right:6px;vertical-align:-2px"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Kirim Laporan</button>
   </div>
 
   <div class="card" style="background:var(--primary-pale);border-color:#aed6f1">
@@ -229,7 +229,7 @@
 <!-- ==================== PAGE: TRACKING ==================== -->
 <div class="page" id="page-tracking">
   <div class="hero">
-    <div class="hero-title">🔍 Lacak Status Laporan</div>
+    <div class="hero-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;margin-right:8px;vertical-align:-2px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>Lacak Status Laporan</div>
     <div class="hero-sub">Masukkan nomor tiket untuk melihat status laporan Anda</div>
   </div>
   <div class="card" style="max-width:560px;margin:0 auto">
@@ -360,6 +360,83 @@
 
   <div id="admin-schools" class="hidden">
     <div class="card">
+      <div class="card-title">Impor Data Sekolah dari Excel</div>
+      <div class="alert alert-info">
+        <div class="alert-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div>
+          Format Excel: NPSN | Nama Sekolah | Jenjang | Kota | Password (opsional)<br>
+          <small>Contoh: 12345678 | SD Maju Jaya | SD | Jakarta | sandi123</small>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Pilih File Excel (.xlsx atau .xls)</label>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <input type="file" id="excelFileInput" accept=".xlsx,.xls" onchange="previewExcelData(this)" style="flex:1">
+          <button class="btn btn-outline" onclick="downloadExcelTemplate()" style="margin-top:0;white-space:nowrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;margin-right:4px;vertical-align:-1px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Template
+          </button>
+        </div>
+      </div>
+      <div id="excelPreview" style="display:none;margin-top:16px">
+        <div style="font-size:12px;color:var(--text-2);margin-bottom:8px">Preview Data:</div>
+        <div class="table-wrap" style="max-height:300px;overflow-y:auto">
+          <table>
+            <thead><tr><th>NPSN</th><th>Nama Sekolah</th><th>Jenjang</th><th>Kota</th><th>Password</th></tr></thead>
+            <tbody id="excelTableBody"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-primary" onclick="importExcelData()" style="margin-top:12px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;margin-right:6px;vertical-align:-2px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Import Data
+        </button>
+        <button class="btn btn-outline" onclick="cancelExcelImport()" style="margin-left:8px">Batal</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Impor dari Google Sheet</div>
+      <div class="alert alert-info">
+        <div class="alert-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div>
+          Buat Google Sheet dengan kolom: NPSN | Nama Sekolah | Jenjang | Kota | Password (opsional)<br>
+          <small>Pastikan sheet di-share dengan "Siapa saja dapat melihat". Salin URL atau Sheet ID-nya.</small>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>URL Google Sheet atau Sheet ID</label>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <input type="text" id="googleSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/SHEET_ID/edit atau SHEET_ID saja" style="flex:1">
+          <button class="btn btn-primary" onclick="importFromGoogleSheet()" style="margin-top:0;white-space:nowrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;margin-right:4px;vertical-align:-1px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Ambil Data
+          </button>
+        </div>
+      </div>
+      <div id="googleSheetLoading" style="display:none;text-align:center;padding:16px;color:var(--text-2)">
+        <div style="font-size:13px">Mengambil data dari Google Sheet...</div>
+      </div>
+      <div id="googleSheetPreview" style="display:none;margin-top:16px">
+        <div style="font-size:12px;color:var(--text-2);margin-bottom:8px">Preview Data:</div>
+        <div class="table-wrap" style="max-height:300px;overflow-y:auto">
+          <table>
+            <thead><tr><th>NPSN</th><th>Nama Sekolah</th><th>Jenjang</th><th>Kota</th><th>Password</th></tr></thead>
+            <tbody id="googleSheetTableBody"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-primary" onclick="confirmGoogleSheetImport()" style="margin-top:12px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;margin-right:6px;vertical-align:-2px"><polyline points="20 6 9 17 4 12"/></svg>
+          Konfirmasi & Import
+        </button>
+        <button class="btn btn-outline" onclick="cancelGoogleSheetImport()" style="margin-left:8px">Batal</button>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-title">Tambah Data Sekolah</div>
       <div class="form-row">
         <div class="form-group">
@@ -420,7 +497,7 @@
   <div id="admin-users" class="hidden">
     <div class="card">
       <div class="card-title">Kelola User Sekolah</div>
-      <div class="alert alert-info"><div class="alert-icon">ℹ️</div><div>User sekolah menggunakan NPSN sebagai username.</div></div>
+      <div class="alert alert-info"><div class="alert-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div><div>User sekolah menggunakan NPSN sebagai username.</div></div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>NPSN</th><th>Nama Sekolah</th><th>Login Pertama</th><th>Reset Password</th></tr></thead>
@@ -481,7 +558,7 @@
 <div class="modal-overlay" id="adminChangePassModal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">🔐 Ganti Password Administrator</div>
+      <div class="modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;margin-right:6px;vertical-align:-1px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Ganti Password Administrator</div>
       <button class="modal-close" onclick="closeModal('adminChangePassModal'); closeMobileNav()">✕</button>
     </div>
     <div id="adminChangePassAlert"></div>
@@ -504,12 +581,40 @@
 <div class="modal-overlay" id="adminForgotPassModal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">📧 Lupa Password Admin</div>
+      <div class="modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;margin-right:6px;vertical-align:-1px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/></svg>Lupa Password Admin</div>
       <button class="modal-close" onclick="closeModal('adminForgotPassModal'); closeMobileNav()">✕</button>
     </div>
     <div id="adminForgotAlert"></div>
-    <div class="alert alert-info"><div class="alert-icon">ℹ️</div><div>Kirim permintaan reset password ke developer.</div></div>
+    <div class="alert alert-info"><div class="alert-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div><div>Kirim permintaan reset password ke developer.</div></div>
     <button class="btn btn-primary btn-full" onclick="sendAdminForgotPass()">Kirim Permintaan Reset ke Developer</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editSchoolModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;margin-right:6px;vertical-align:-1px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit Data Sekolah</div>
+      <button class="modal-close" onclick="closeEditSchool(); closeMobileNav()">✕</button>
+    </div>
+    <div class="form-group">
+      <label>NPSN <span>*</span></label>
+      <input type="text" id="e_npsn" placeholder="8 digit NPSN" disabled style="background:var(--neutral);cursor:not-allowed">
+    </div>
+    <div class="form-group">
+      <label>Nama Sekolah <span>*</span></label>
+      <input type="text" id="e_sname" placeholder="Nama lengkap sekolah">
+    </div>
+    <div class="form-group">
+      <label>Jenjang <span>*</span></label>
+      <select id="e_level">
+        <option>SD</option><option>SMP</option><option>SMA</option><option>SMK</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Kota/Kabupaten <span>*</span></label>
+      <input type="text" id="e_city" placeholder="Kota">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveEditSchool()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;margin-right:6px;vertical-align:-2px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Simpan Perubahan</button>
   </div>
 </div>
 

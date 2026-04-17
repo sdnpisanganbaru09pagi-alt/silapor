@@ -12,6 +12,19 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ============================================================
+// LOAD XLSX LIBRARY (CDN)
+// ============================================================
+(function loadXLSX() {
+  if (typeof XLSX === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.15.6/xlsx.full.min.js';
+    script.onload = () => console.log('✓ XLSX library loaded from CDN');
+    script.onerror = () => console.error('✗ Failed to load XLSX library from CDN');
+    document.head.appendChild(script);
+  }
+})();
+
+// ============================================================
 // KONFIGURASI FIREBASE
 // ============================================================
 const firebaseConfig = {
