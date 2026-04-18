@@ -339,10 +339,6 @@ body {
 
 .page.active { display: block }
 
-/* Login pages butuh display:flex — override harus setelah .page.active */
-#page-school-login.active,
-#page-admin-login.active { display: flex }
-
 /* ---- Footer ---- */
 footer {
   width: 100%;
@@ -706,10 +702,16 @@ tr:hover td { background: #fafbfe }
 
 #page-school-login,
 #page-admin-login {
+  display: none;
   align-items: center;
   justify-content: center;
   flex: 1;
-  padding: 24px;
+  padding: 24px !important;
+}
+
+#page-school-login.active,
+#page-admin-login.active {
+  display: flex;
 }
 
 .login-wrap {
@@ -1052,17 +1054,16 @@ tr:hover td { background: #fafbfe }
 .mt-16        { margin-top: 16px }
 
 /* ============================================================
-   RESPONSIVE — TABLET (481px – 1024px)  →  Rasio 10:16
-   Sidebar mengecil jadi "rail" icon-only (56px).
-   Konten lebih lega, stats 3 kolom, form tetap 2 kolom.
+   RESPONSIVE — MOBILE
    ============================================================ */
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr) }
+  .form-row   { grid-template-columns: 1fr }
 
-  /* ---- Sidebar jadi drawer dari kiri, topbar muncul ---- */
+  /* Sidebar jadi drawer dari kiri */
   .sidebar {
     transform: translateX(-100%);
-    width: var(--sidebar-width); /* tetap lebar saat terbuka */
   }
 
   .sidebar.open {
@@ -1075,181 +1076,19 @@ tr:hover td { background: #fafbfe }
   /* Topbar muncul */
   .topbar { display: flex }
 
-  /* Main konten mulai dari atas, tidak offset sidebar */
+  /* Main konten geser turun */
   .main-content {
     margin-left: 0;
     padding-top: var(--topbar-height);
   }
 
-  /* ---- Page & konten ---- */
-  .page { padding: 18px 16px }
+  .page { padding: 16px 12px }
 
-  /* Stats 3 kolom di tablet (lebih optimal dari 2 atau 4) */
-  .stats-grid { grid-template-columns: repeat(3, 1fr) }
-
-  /* Hero sedikit lebih compact */
-  .hero { padding: 26px 24px }
-  .hero-title { font-size: 20px }
-
-  /* Card padding */
-  .card { padding: 18px }
-
-  /* Stat number sedikit lebih kecil */
-  .stat-num { font-size: 26px }
-
-  /* Login pages — align-items: flex-start agar tidak tertimpa topbar fixed */
+  /* Login pages */
   #page-school-login,
   #page-admin-login {
-    align-items: flex-start;
-    padding: 24px 16px;
-    min-height: calc(100vh - var(--topbar-height));
+    padding: 16px 12px !important;
   }
-}
-
-/* ============================================================
-   RESPONSIVE — SMARTPHONE (≤ 480px)  →  Rasio 9:16
-   Layout 1 kolom penuh. Padding minimum. Font compact.
-   ============================================================ */
-
-@media (max-width: 480px) {
-
-  /* ---- Variabel override ---- */
-  :root {
-    --topbar-height: 48px;
-    --radius:        10px;
-    --radius-sm:     7px;
-  }
-
-  /* ---- Body ---- */
-  body { font-size: 14px }
-
-  /* ---- Page ---- */
-  .page { padding: 10px 10px }
-
-  /* ---- Hero ---- */
-  .hero {
-    padding: 18px 16px;
-    border-radius: 12px;
-    margin-bottom: 16px;
-  }
-
-  .hero-title {
-    font-size: 17px;
-    line-height: 1.4;
-  }
-
-  .hero-sub { font-size: 13px }
-
-  .hero-badge {
-    font-size: 11px;
-    padding: 3px 10px;
-    margin-top: 10px;
-  }
-
-  /* ---- Cards ---- */
-  .card {
-    padding: 14px 12px;
-    margin-bottom: 12px;
-    border-radius: 10px;
-  }
-
-  .card-title { font-size: 14px; margin-bottom: 12px }
-
-  /* ---- Forms — 1 kolom penuh ---- */
-  .form-row { grid-template-columns: 1fr; gap: 0 }
-
-  .form-group {
-    gap: 5px;
-    margin-bottom: 12px;
-  }
-
-  .form-group label { font-size: 12px }
-
-  input, select, textarea {
-    padding: 9px 12px;
-    font-size: 14px;
-  }
-
-  textarea { min-height: 80px }
-
-  /* ---- Buttons ---- */
-  .btn {
-    padding: 10px 16px;
-    font-size: 13px;
-  }
-
-  .btn-sm { padding: 6px 12px; font-size: 12px }
-
-  /* ---- Stats — 2 kolom di mobile ---- */
-  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px }
-
-  .stat-card { padding: 12px 10px }
-
-  .stat-num   { font-size: 22px }
-  .stat-label { font-size: 11px }
-
-  /* ---- Topbar ---- */
-  .topbar { padding: 0 12px }
-
-  /* ---- Sidebar backdrop lebih gelap ---- */
-  .sidebar-backdrop { background: rgba(0,0,0,0.55) }
-
-  /* ---- Tabs (admin) ---- */
-  .tab { padding: 8px 14px; font-size: 12px }
-
-  /* ---- Search bar ---- */
-  .search-bar { gap: 8px }
-  .search-bar input { min-width: 0 }
-
-  /* ---- Foto preview — 2 kolom di hp kecil ---- */
-  .photo-preview { grid-template-columns: repeat(2, 1fr) }
-
-  /* ---- Captcha ---- */
-  .captcha-box { flex-wrap: wrap; gap: 10px }
-
-  /* ---- Modal ---- */
-  .modal {
-    padding: 18px 16px;
-    max-height: 90vh;
-    border-radius: 14px;
-  }
-
-  .modal-overlay { padding: 12px }
-
-  /* ---- Table ---- */
-  th { font-size: 11px; padding: 8px 10px }
-  td { font-size: 12px; padding: 10px 10px }
-
-  /* ---- Login ---- */
-  #page-school-login,
-  #page-admin-login {
-    padding: 10px 10px;
-    align-items: flex-start;
-  }
-
-  .login-wrap { max-width: 100% }
-
-  .login-logo h2 { font-size: 20px }
-  .login-logo p  { font-size: 13px }
-
-  /* ---- Input with button (lacak laporan) ---- */
-  .input-with-btn { flex-direction: column }
-  .input-with-btn .btn { width: 100% }
-
-  /* ---- Steps (cara kerja) ---- */
-  .steps { flex-direction: column }
-  .step  { border-right: none; border-bottom: 1px solid var(--border) }
-  .step:last-child { border-bottom: none }
-
-  /* ---- Filter chips ---- */
-  .filter-chip { padding: 4px 10px; font-size: 11px }
-
-  /* ---- Footer ---- */
-  footer { padding: 16px 12px }
-
-  /* ---- Photo buttons ---- */
-  .photo-button-row { gap: 6px }
-  .photo-button-row .btn { flex: 1; min-width: 0; font-size: 12px; padding: 8px 10px }
 }
 
 /* ============================================================
