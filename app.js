@@ -636,7 +636,7 @@ function submitReport() {
 
     submitBtn.disabled = false;
     submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Kirim Laporan';
-    showTicketSuccessModal(id);
+    showAlert('reporterAlert', 'success', `Laporan berhasil dikirim! Nomor Tiket Anda: <strong>${id}</strong>.`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }).catch(() => {
     submitBtn.disabled = false;
@@ -1840,71 +1840,6 @@ async function saveAdminPassword() {
   if (window.fbSaveAdmin) await window.fbSaveAdmin({ username: DB.admin.username, passwordHash: hash });
   closeModal('adminChangePassModal');
   alert('Password administrator berhasil diperbarui!');
-}
-
-// ====================== TICKET SUCCESS MODAL ======================
-function showTicketSuccessModal(ticketId) {
-  // Buat modal jika belum ada
-  if (!document.getElementById('ticketSuccessModal')) {
-    const modal = document.createElement('div');
-    modal.id = 'ticketSuccessModal';
-    modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:16px';
-    modal.innerHTML = `
-      <div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.18)">
-        <div style="font-size:48px;margin-bottom:8px">🎉</div>
-        <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px">Laporan Berhasil Dikirim!</div>
-        <div style="font-size:13px;color:var(--text-3);margin-bottom:20px">Simpan nomor tiket ini untuk memantau status laporan Anda.</div>
-        <div style="background:var(--primary-pale,#eaf4fb);border:1.5px dashed var(--primary,#2980b9);border-radius:10px;padding:14px 16px;margin-bottom:20px">
-          <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;font-weight:600;letter-spacing:.5px">NOMOR TIKET</div>
-          <div id="successTicketId" style="font-size:22px;font-weight:800;color:var(--primary,#2980b9);letter-spacing:2px;font-family:'Sora',monospace"></div>
-        </div>
-        <button id="copyTicketBtn" onclick="copyTicketId()" style="width:100%;padding:12px;background:var(--primary,#2980b9);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
-          ${SVGIcons.clipboard} Salin Nomor Tiket
-        </button>
-        <button onclick="closeTicketSuccessModal()" style="width:100%;padding:11px;background:transparent;color:var(--text-3);border:1.5px solid var(--border,#ddd);border-radius:8px;font-size:14px;cursor:pointer">Tutup</button>
-      </div>`;
-    document.body.appendChild(modal);
-  }
-
-  document.getElementById('successTicketId').textContent = ticketId;
-  const btn = document.getElementById('copyTicketBtn');
-  btn.innerHTML = SVGIcons.clipboard + ' Salin Nomor Tiket';
-  btn.style.background = 'var(--primary,#2980b9)';
-  document.getElementById('ticketSuccessModal').style.display = 'flex';
-}
-
-function closeTicketSuccessModal() {
-  const modal = document.getElementById('ticketSuccessModal');
-  if (modal) modal.style.display = 'none';
-}
-
-function copyTicketId() {
-  const id = document.getElementById('successTicketId').textContent;
-  if (!id) return;
-  navigator.clipboard.writeText(id).then(() => {
-    const btn = document.getElementById('copyTicketBtn');
-    btn.innerHTML = SVGIcons.check + ' Tersalin!';
-    btn.style.background = 'var(--success,#27ae60)';
-    setTimeout(() => {
-      btn.innerHTML = SVGIcons.clipboard + ' Salin Nomor Tiket';
-      btn.style.background = 'var(--primary,#2980b9)';
-    }, 2000);
-  }).catch(() => {
-    // Fallback untuk browser lama
-    const tmp = document.createElement('input');
-    tmp.value = id;
-    document.body.appendChild(tmp);
-    tmp.select();
-    document.execCommand('copy');
-    document.body.removeChild(tmp);
-    const btn = document.getElementById('copyTicketBtn');
-    btn.innerHTML = SVGIcons.check + ' Tersalin!';
-    btn.style.background = 'var(--success,#27ae60)';
-    setTimeout(() => {
-      btn.innerHTML = SVGIcons.clipboard + ' Salin Nomor Tiket';
-      btn.style.background = 'var(--primary,#2980b9)';
-    }, 2000);
-  });
 }
 
 // ====================== INIT ======================
