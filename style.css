@@ -327,6 +327,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow-x: hidden;   /* cegah konten child melebar layar */
+  min-width: 0;
 }
 
 /* ---- Pages ---- */
@@ -335,6 +337,8 @@ body {
   padding: 24px;
   max-width: 900px;
   width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .page.active { display: block }
@@ -407,6 +411,12 @@ footer {
   border: 1px solid var(--border);
   padding: 20px;
   margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(26,82,118,0.07), 0 1px 3px rgba(0,0,0,0.05);
+  transition: box-shadow .2s;
+}
+
+.card:hover {
+  box-shadow: 0 6px 20px rgba(26,82,118,0.11), 0 2px 6px rgba(0,0,0,0.06);
 }
 
 .card-title {
@@ -589,6 +599,13 @@ textarea { resize: vertical; min-height: 100px }
   border: 1px solid var(--border);
   padding: 16px;
   text-align: center;
+  box-shadow: 0 2px 8px rgba(26,82,118,0.07), 0 1px 3px rgba(0,0,0,0.05);
+  transition: box-shadow .2s, transform .2s;
+}
+
+.stat-card:hover {
+  box-shadow: 0 6px 20px rgba(26,82,118,0.13), 0 2px 6px rgba(0,0,0,0.07);
+  transform: translateY(-2px);
 }
 
 .stat-num {
@@ -858,9 +875,12 @@ tr:hover td { background: #fafbfe }
   padding: 16px;
   margin-bottom: 10px;
   transition: box-shadow .2s;
+  min-width: 0;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(26,82,118,0.07), 0 1px 2px rgba(0,0,0,0.04);
 }
 
-.ticket:hover { box-shadow: var(--shadow) }
+.ticket:hover { box-shadow: 0 4px 16px rgba(26,82,118,0.13), 0 2px 6px rgba(0,0,0,0.06); }
 
 .ticket-head {
   display: flex;
@@ -868,6 +888,7 @@ tr:hover td { background: #fafbfe }
   align-items: flex-start;
   gap: 8px;
   margin-bottom: 8px;
+  min-width: 0;
 }
 
 .ticket-id {
@@ -881,6 +902,8 @@ tr:hover td { background: #fafbfe }
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .ticket-meta {
@@ -899,6 +922,9 @@ tr:hover td { background: #fafbfe }
   line-height: 1.6;
   border-left: 3px solid var(--primary-pale);
   padding-left: 10px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 /* ============================================================
@@ -907,24 +933,54 @@ tr:hover td { background: #fafbfe }
 
 .search-bar {
   display: flex;
+  flex-direction: column;
   gap: 10px;
   margin-bottom: 16px;
-  align-items: center;
-  flex-wrap: wrap;
 }
 
-.search-bar input { flex: 1; min-width: 180px }
+/* Baris input pencarian — full width, lebih menonjol */
+.search-bar input {
+  width: 100%;
+  padding: 11px 16px 11px 42px;
+  font-size: 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--neutral) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 14px center;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+
+.search-bar input:focus {
+  background-color: var(--white);
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(46,134,193,0.12);
+  outline: none;
+}
+
+/* Baris chips filter — di bawah input */
+.search-bar-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
 
 .filter-chip {
-  padding: 4px 12px;
+  padding: 5px 14px;
   border-radius: 20px;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   background: var(--white);
+  color: var(--text-2);
   font-family: 'Plus Jakarta Sans', sans-serif;
   transition: background .15s, color .15s, border-color .15s;
   white-space: nowrap;
+}
+
+.filter-chip:hover {
+  border-color: var(--primary-light);
+  color: var(--primary);
 }
 
 .filter-chip.active {
@@ -968,31 +1024,56 @@ tr:hover td { background: #fafbfe }
 }
 
 /* ============================================================
-   ADMIN TABS
+   ADMIN TABS — pill/chip navigation
    ============================================================ */
 
 .tabs {
   display: flex;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 20px;
+  gap: 6px;
   flex-wrap: wrap;
+  margin-bottom: 20px;
+  background: var(--neutral);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 5px;
 }
 
 .tab {
-  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-3);
-  border-bottom: 2px solid transparent;
-  transition: color .2s, border-color .2s;
   white-space: nowrap;
+  transition: background .18s, color .18s, box-shadow .18s;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.tab:hover {
+  background: var(--white);
+  color: var(--text-2);
 }
 
 .tab.active {
+  background: var(--white);
   color: var(--primary);
-  border-bottom-color: var(--primary);
   font-weight: 600;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.09);
+}
+
+.tab svg {
+  flex-shrink: 0;
+  opacity: .7;
+}
+
+.tab.active svg {
+  opacity: 1;
 }
 
 /* ============================================================
@@ -1089,6 +1170,101 @@ tr:hover td { background: #fafbfe }
   #page-admin-login {
     padding: 16px 12px !important;
   }
+
+  /* Hero lebih compact di mobile */
+  .hero {
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+
+  .hero-title { font-size: 17px }
+  .hero-sub   { font-size: 13px }
+
+  /* Stat number lebih kecil agar muat 2 kolom */
+  .stat-num   { font-size: 22px }
+  .stat-card  { padding: 12px 8px }
+  .stat-label { font-size: 11px }
+
+  /* Card header (judul + tombol cetak) stack vertikal */
+  .card > div[style*="justify-content:space-between"],
+  .card > div[style*="justify-content: space-between"] {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+
+  /* Search bar + filter chips wrap rapi */
+  .search-bar {
+    gap: 8px;
+  }
+
+  .search-bar input {
+    font-size: 14px; /* cegah auto-zoom iOS */
+  }
+
+  .filter-chip {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  /* Steps horizontal → tetap horizontal tapi font lebih kecil */
+  .step {
+    font-size: 11px;
+    padding: 10px 4px;
+  }
+
+  .step-num { font-size: 10px }
+
+  /* Admin tabs: 2 kolom di mobile */
+  .tabs {
+    border-radius: 10px;
+    padding: 4px;
+  }
+
+  .tab {
+    flex: 1 1 calc(50% - 6px);
+    font-size: 12px;
+    padding: 8px 8px;
+    border-radius: 7px;
+  }
+
+  .tab svg { display: none }
+
+  /* Captcha agar tidak meluber */
+  .captcha-box {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* Tombol foto wrap di mobile */
+  .photo-button-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .photo-button-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Input dengan tombol (lacak laporan) */
+  .input-with-btn {
+    flex-wrap: wrap;
+  }
+
+  .input-with-btn .btn {
+    width: 100%;
+  }
+
+  /* Tabel horizontal scroll aman */
+  .table-wrap {
+    max-width: 100%;
+  }
+
+  /* Modal full width di mobile */
+  .modal {
+    padding: 18px 14px;
+    border-radius: 12px;
+  }
 }
 
 /* ============================================================
@@ -1178,4 +1354,11 @@ tr:hover td { background: #fafbfe }
   max-height: 88vh;
   border-radius: 10px;
   object-fit: contain;
+}
+/* ====================== FIELD HINT ====================== */
+.field-hint {
+  font-size: 11px;
+  margin-top: 4px;
+  line-height: 1.4;
+  transition: color 0.2s;
 }

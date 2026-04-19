@@ -148,7 +148,8 @@ function applySchoolState(school) {
   document.getElementById('sidebarUserRole').textContent = 'NPSN: ' + school.id;
   document.getElementById('sidebarUser').classList.remove('hidden');
   document.getElementById('sidebarActions').classList.remove('hidden');
-  document.getElementById('sidebarBtnChangePass').classList.add('hidden');
+  document.getElementById('sidebarBtnChangePass').style.display = 'none';
+  document.getElementById('sidebarBtnSchoolChangePass').style.display = '';
 
   document.getElementById('topbarUserAvatar').textContent = initials;
   document.getElementById('topbarUser').classList.remove('hidden');
@@ -178,7 +179,8 @@ function applyAdminState() {
   document.getElementById('sidebarUserRole').textContent = 'Akses Penuh';
   document.getElementById('sidebarUser').classList.remove('hidden');
   document.getElementById('sidebarActions').classList.remove('hidden');
-  document.getElementById('sidebarBtnChangePass').classList.remove('hidden');
+  document.getElementById('sidebarBtnChangePass').style.display = '';
+  document.getElementById('sidebarBtnSchoolChangePass').style.display = 'none';
 
   document.getElementById('topbarUserAvatar').textContent = 'AD';
   document.getElementById('topbarUser').classList.remove('hidden');
@@ -585,6 +587,62 @@ function handlePhotos(inp) {
   });
 }
 
+// ====================== FIELD VALIDATION HELPERS ======================
+
+const NAME_MAX = 60;
+const WA_MIN = 9;
+const WA_MAX = 15;
+
+function showFieldHint(hintId, msg, isError) {
+  const el = document.getElementById(hintId);
+  if (!el) return;
+  if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.color = isError ? 'var(--danger)' : 'var(--text-3)';
+}
+
+// Field Nama: hanya huruf, spasi, tanda titik, dan tanda hubung
+function filterNameInput(input) {
+  // Hapus karakter yang tidak diizinkan (angka & simbol selain . dan -)
+  const cleaned = input.value.replace(/[^a-zA-ZÀ-öø-ÿ\s.\-']/g, '');
+  if (input.value !== cleaned) input.value = cleaned;
+
+  const len = cleaned.trim().length;
+  if (len === 0) {
+    showFieldHint('r_name_hint', '', false);
+  } else if (len < 3) {
+    showFieldHint('r_name_hint', 'Nama terlalu pendek (minimal 3 karakter).', true);
+  } else {
+    showFieldHint('r_name_hint', `${cleaned.length}/${NAME_MAX} karakter`, false);
+  }
+}
+
+// Field WA: hanya angka, wajib diawali 0 atau +62
+function filterWAInput(input) {
+  // Izinkan + hanya di posisi pertama, sisanya hanya angka
+  let val = input.value;
+  // Hapus semua bukan angka dan + di awal
+  val = val.replace(/[^\d+]/g, '');
+  // Pastikan + hanya muncul di index 0
+  if (val.indexOf('+') > 0) val = val.replace(/\+/g, '');
+  if (val.split('+').length > 2) val = val.replace(/\+/g, '');
+  input.value = val;
+
+  const digits = val.replace(/\D/g, '');
+  const len = digits.length;
+
+  if (val.length === 0) {
+    showFieldHint('r_wa_hint', '', false);
+  } else if (!val.startsWith('0') && !val.startsWith('+62') && !val.startsWith('62')) {
+    showFieldHint('r_wa_hint', 'Nomor harus diawali 0 atau +62.', true);
+  } else if (len < WA_MIN) {
+    showFieldHint('r_wa_hint', `Terlalu pendek — minimal ${WA_MIN} digit (sekarang ${len}).`, true);
+  } else {
+    showFieldHint('r_wa_hint', `${len} digit — valid`, false);
+  }
+}
+
 // ====================== SUBMIT REPORT ======================
 function submitReport() {
   const name = document.getElementById('r_name').value.trim();
@@ -595,7 +653,14 @@ function submitReport() {
   const desc = document.getElementById('r_desc').value.trim();
 
   if (!name) return showAlert('reporterAlert', 'danger', 'Nama pelapor wajib diisi.');
+  if (name.length < 3) return showAlert('reporterAlert', 'danger', 'Nama pelapor minimal 3 karakter.');
+  if (name.length > NAME_MAX) return showAlert('reporterAlert', 'danger', `Nama pelapor maksimal ${NAME_MAX} karakter.`);
+  if (/\d/.test(name)) return showAlert('reporterAlert', 'danger', 'Nama pelapor tidak boleh mengandung angka.');
   if (!wa) return showAlert('reporterAlert', 'danger', 'Nomor WhatsApp wajib diisi.');
+  if (!/^(\+62|62|0)\d+$/.test(wa)) return showAlert('reporterAlert', 'danger', 'Nomor WhatsApp hanya boleh berisi angka dan harus diawali 0 atau +62.');
+  const waDigits = wa.replace(/\D/g, '');
+  if (waDigits.length < WA_MIN) return showAlert('reporterAlert', 'danger', `Nomor WhatsApp minimal ${WA_MIN} digit (sekarang ${waDigits.length}).`);
+  if (waDigits.length > WA_MAX) return showAlert('reporterAlert', 'danger', `Nomor WhatsApp maksimal ${WA_MAX} digit.`);
   if (!schoolId) return showAlert('reporterAlert', 'danger', 'Pilih sekolah dari dropdown.');
   if (!topic) return showAlert('reporterAlert', 'danger', 'Pilih topik permasalahan.');
   if (desc.length < 20) return showAlert('reporterAlert', 'danger', 'Deskripsi permasalahan minimal 20 karakter.');
@@ -954,7 +1019,7 @@ async function importExcelData() {
   cancelExcelImport();
   renderSchoolTable();
   
-  let message = `✓ ${successCount} sekolah berhasil diimport`;
+  let message = `${successCount} sekolah berhasil diimport`;
   if (duplicateCount > 0) message += ` (${duplicateCount} data duplikat dilewati)`;
   alert(message);
 }
@@ -1089,7 +1154,7 @@ async function confirmGoogleSheetImport() {
   cancelGoogleSheetImport();
   renderSchoolTable();
   
-  let message = `✓ ${successCount} sekolah berhasil diimport dari Google Sheet`;
+  let message = `${successCount} sekolah berhasil diimport dari Google Sheet`;
   if (duplicateCount > 0) message += ` (${duplicateCount} data duplikat dilewati)`;
   alert(message);
 }
@@ -1207,7 +1272,7 @@ function openTicket(id, isSchool) {
 
     const photosHTML = t.photos && t.photos.length > 0 ? `
       <div style="margin-bottom:16px">
-        <div style="font-size:12px;color:var(--text-3);margin-bottom:8px;font-weight:600">📷 Foto Laporan</div>
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:8px;font-weight:600;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto Laporan</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
           ${t.photos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
         </div>
@@ -1215,7 +1280,7 @@ function openTicket(id, isSchool) {
 
     const processPhotosHTML = t.followUpPhotos && t.followUpPhotos.length > 0 ? `
       <div style="margin-top:12px">
-        <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;font-weight:600">📷 Foto Tindak Lanjut</div>
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;font-weight:600;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto Tindak Lanjut</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
           ${t.followUpPhotos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
         </div>
@@ -1231,7 +1296,7 @@ function openTicket(id, isSchool) {
       </div>
       <!-- BAGIAN 1: LAPORAN AWAL (BIRU) -->
       <div style="background:var(--primary-pale);border:2px solid var(--primary);border-radius:12px;padding:16px;margin-bottom:16px">
-        <div style="font-size:12px;color:var(--primary);font-weight:700;margin-bottom:8px;text-transform:uppercase">📋 Laporan Awal</div>
+        <div style="font-size:12px;color:var(--primary);font-weight:700;margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg> Laporan Awal</div>
         <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Dilaporkan: ${date}</div>
         <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
           <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Topik</div>
@@ -1259,7 +1324,7 @@ function openTicket(id, isSchool) {
       ${(t.status === 'Dalam Proses' || t.status === 'Selesai') ? `
       <!-- BAGIAN 2: PROSES (ORANYE) -->
       <div style="background:#fff3e0;border:2px solid #ffb74d;border-radius:12px;padding:16px;margin-bottom:16px">
-        <div style="font-size:12px;color:#ff8c00;font-weight:700;margin-bottom:8px;text-transform:uppercase">⚙️ Dalam Proses</div>
+        <div style="font-size:12px;color:#ff8c00;font-weight:700;margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff8c00" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 0l4.24-4.24M1 12h6m6 0h6m-17.78 7.78l4.24-4.24m5.08 0l4.24 4.24"/></svg> Dalam Proses</div>
         <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Status Diubah: ${processDate}</div>
         <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
           <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Catatan Tindak Lanjut</div>
@@ -1272,7 +1337,7 @@ function openTicket(id, isSchool) {
       ${t.status === 'Selesai' ? `
       <!-- BAGIAN 3: PENYELESAIAN (HIJAU) -->
       <div style="background:var(--success-pale);border:2px solid var(--success);border-radius:12px;padding:16px;margin-bottom:16px">
-        <div style="font-size:12px;color:var(--success);font-weight:700;margin-bottom:8px;text-transform:uppercase">✓ Selesai</div>
+        <div style="font-size:12px;color:var(--success);font-weight:700;margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Selesai</div>
         <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Selesai: ${completeDate}</div>
         <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid #a9dfbf">
           <div style="font-size:12px;color:var(--success);margin-bottom:4px;font-weight:600">Laporan ini telah selesai ditangani oleh pihak sekolah.</div>
@@ -1284,24 +1349,24 @@ function openTicket(id, isSchool) {
       ${isSchool && t.status !== 'Selesai' ? `
       <!-- FORM AKSI (Untuk sekolah yang belum selesai) -->
       <div style="border-top:2px solid var(--border);padding-top:16px;margin-top:16px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--primary)">📝 Catatan Tindak Lanjut</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--primary);display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Catatan Tindak Lanjut</div>
         <textarea id="ticketNotes" placeholder="Tuliskan langkah tindak lanjut yang telah dilakukan..." style="margin-bottom:12px;min-height:80px;width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:inherit">${t.notes || ''}</textarea>
         
         <div style="font-size:12px;color:var(--text-3);margin-bottom:12px;background:var(--neutral);padding:10px;border-radius:6px">
-          ${t.status === 'Baru' ? '💡 Foto tindak lanjut opsional saat memproses laporan.' : '⚠️ Foto tindak lanjut wajib untuk menyelesaikan laporan.'}
+          ${t.status === 'Baru' ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Foto tindak lanjut opsional saat memproses laporan.' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Foto tindak lanjut wajib untuk menyelesaikan laporan.'}
         </div>
         
         <div style="display:flex;gap:8px;margin-bottom:12px">
-          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('followUpPhotoInputCamera').click()" style="flex:1">📷 Ambil Foto</button>
-          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('followUpPhotoInputGallery').click()" style="flex:1">🖼️ Dari Galeri</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('followUpPhotoInputCamera').click()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Ambil Foto</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('followUpPhotoInputGallery').click()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Dari Galeri</button>
         </div>
         
         <div style="font-size:11px;color:var(--text-3);text-align:center;margin-bottom:12px">Maks. 3 foto, JPG/PNG</div>
         <div id="followUpPreview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px"></div>
         
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${t.status === 'Baru' ? `<button class="btn btn-sm" style="background:var(--warning-pale);color:var(--warning);border:2px solid #f9e79f;flex:1;font-weight:600" onclick="updateStatusModal('${t.id}','Dalam Proses')">▶️ Proses Laporan</button>` : ''}
-          ${t.status === 'Dalam Proses' ? `<button class="btn btn-sm" style="background:var(--success-pale);color:var(--success);border:2px solid #a9dfbf;flex:1;font-weight:600" onclick="updateStatusModal('${t.id}','Selesai')">✓ Selesaikan Laporan</button>` : ''}
+          ${t.status === 'Baru' ? `<button class="btn btn-sm" style="background:var(--warning-pale);color:var(--warning);border:2px solid #f9e79f;flex:1;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px" onclick="updateStatusModal('${t.id}','Dalam Proses')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Proses Laporan</button>` : ''}
+          ${t.status === 'Dalam Proses' ? `<button class="btn btn-sm" style="background:var(--success-pale);color:var(--success);border:2px solid #a9dfbf;flex:1;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px" onclick="updateStatusModal('${t.id}','Selesai')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Selesaikan Laporan</button>` : ''}
         </div>
       </div>
       ` : ''}
@@ -1359,7 +1424,7 @@ function updateStatusModal(id, status) {
     closeModal('ticketModal');
     renderSchoolTickets();
     updateSchoolStats();
-    alert('✓ Laporan berhasil diperbarui!');
+    alert('Laporan berhasil diperbarui!');
   })();
 }
 
@@ -1390,10 +1455,40 @@ async function saveNewPassword() {
   alert('Password berhasil diperbarui!');
 }
 
+// ====================== SCHOOL CHANGE PASSWORD (MANDIRI) ======================
+function openSchoolChangePass() {
+  document.getElementById('schoolChangePassAlert').innerHTML = '';
+  document.getElementById('schoolOldPass').value = '';
+  document.getElementById('schoolNewPass1').value = '';
+  document.getElementById('schoolNewPass2').value = '';
+  openModal('schoolChangePassModal');
+}
+
+async function saveSchoolPassword() {
+  const oldPass = document.getElementById('schoolOldPass').value;
+  const p1 = document.getElementById('schoolNewPass1').value;
+  const p2 = document.getElementById('schoolNewPass2').value;
+  const DB = loadDB();
+  const school = DB.schools.find(x => x.id === currentUser.school.id);
+  if (!school) return showAlert('schoolChangePassAlert', 'danger', 'Data sekolah tidak ditemukan.');
+  if (!(await verifyPassword(oldPass, school))) return showAlert('schoolChangePassAlert', 'danger', 'Password saat ini tidak sesuai.');
+  if (p1.length < 8) return showAlert('schoolChangePassAlert', 'danger', 'Password baru minimal 8 karakter.');
+  if (p1 !== p2) return showAlert('schoolChangePassAlert', 'danger', 'Konfirmasi password tidak cocok.');
+  const hash = await hashPassword(p1);
+  school.passwordHash = hash;
+  school.firstLogin = false;
+  if (window.fbUpdateSchool) await window.fbUpdateSchool(school.id, { passwordHash: hash, firstLogin: false });
+  currentUser.school = school;
+  document.getElementById('firstLoginBanner').classList.add('hidden');
+  closeModal('schoolChangePassModal');
+  recordActivity('CHANGE_PASSWORD', `School: ${school.name} (${school.id})`);
+  alert('Password berhasil diperbarui!');
+}
+
 // ====================== RESET PASSWORD (ADMIN) ======================
 function openResetPass(npsn, name) {
   resetTargetNPSN = npsn;
-  document.getElementById('resetPassContent').innerHTML = `<div class="alert alert-warning"><div class="alert-icon">⚠️</div><div>Reset password untuk: <strong>${name}</strong> (NPSN: ${npsn})</div></div>`;
+  document.getElementById('resetPassContent').innerHTML = `<div class="alert alert-warning"><div class="alert-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div>Reset password untuk: <strong>${name}</strong> (NPSN: ${npsn})</div></div>`;
   document.getElementById('resetPassVal').value = '';
   openModal('resetPassModal');
 }
@@ -1510,7 +1605,7 @@ async function printTicketsPDF() {
 <body>
   <div class="header">
     <div class="header-left">
-      <div class="app-name">🛡 SiLaPor</div>
+      <div class="app-name"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> SiLaPor</div>
       <div class="app-sub">Sistem Laporan Sekolah</div>
     </div>
     <div class="header-right">
@@ -1577,18 +1672,18 @@ async function printSingleTicketPDF(id) {
   const tglSelesai = t.completeDate ? _fmtDate(t.completeDate) : '-';
 
   const photosHTML = t.photos && t.photos.length > 0
-    ? `<div class="section-label">📷 Foto Laporan</div>
+    ? `<div class="section-label" style="display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto Laporan</div>
        <div class="photo-grid">${t.photos.map(p => `<img src="${p}" class="photo">`).join('')}</div>`
     : '';
 
   const followUpPhotosHTML = t.followUpPhotos && t.followUpPhotos.length > 0
-    ? `<div class="section-label" style="color:#2e7d32">📷 Foto Tindak Lanjut</div>
+    ? `<div class="section-label" style="color:#2e7d32;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto Tindak Lanjut</div>
        <div class="photo-grid">${t.followUpPhotos.map(p => `<img src="${p}" class="photo">`).join('')}</div>`
     : '';
 
   const prosesBlock = (t.status === 'Dalam Proses' || t.status === 'Selesai') ? `
     <div class="block orange">
-      <div class="block-title" style="color:#f57c00">⚙️ Dalam Proses</div>
+      <div class="block-title" style="color:#f57c00;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f57c00" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 0l4.24-4.24M1 12h6m6 0h6m-17.78 7.78l4.24-4.24m5.08 0l4.24 4.24"/></svg> Dalam Proses</div>
       <div class="row-2col">
         <div><div class="lbl">Tanggal Diproses</div><div class="val">${tglProses}</div></div>
         <div><div class="lbl">Catatan Tindak Lanjut</div><div class="val">${t.notes || '(Belum ada catatan)'}</div></div>
@@ -1598,7 +1693,7 @@ async function printSingleTicketPDF(id) {
 
   const selesaiBlock = t.status === 'Selesai' ? `
     <div class="block green">
-      <div class="block-title" style="color:#2e7d32">✓ Selesai</div>
+      <div class="block-title" style="color:#2e7d32;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Selesai</div>
       <div class="lbl">Tanggal Selesai</div>
       <div class="val">${tglSelesai}</div>
     </div>` : '';
@@ -1640,7 +1735,7 @@ async function printSingleTicketPDF(id) {
 <body>
   <div class="header">
     <div class="header-left">
-      <div class="app-name">🛡 SiLaPor</div>
+      <div class="app-name"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> SiLaPor</div>
       <div class="app-sub">Sistem Laporan Sekolah</div>
     </div>
     <div class="header-right">
@@ -1653,7 +1748,7 @@ async function printSingleTicketPDF(id) {
   <span class="status-badge">${_statusLabel(t.status)}</span>
 
   <div class="block blue">
-    <div class="block-title" style="color:#1a73e8">📋 Laporan Awal — Dilaporkan: ${tglLapor}</div>
+    <div class="block-title" style="color:#1a73e8;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg> Laporan Awal — Dilaporkan: ${tglLapor}</div>
     <div class="inner" style="margin-bottom:10px">
       <div class="lbl">Topik</div>
       <div class="val">${t.topic}</div>
@@ -1745,7 +1840,7 @@ function handleFollowUpPhotos(inp) {
       prev.appendChild(img);
     });
   }).catch(() => {
-    prev.innerHTML = '<div style="grid-column:1/-1;color:var(--danger);font-size:13px">❌ Gagal memproses foto. Coba lagi.</div>';
+    prev.innerHTML = '<div style="grid-column:1/-1;color:var(--danger);font-size:13px;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Gagal memproses foto. Coba lagi.</div>';
   });
 }
 
@@ -1753,7 +1848,7 @@ function handleFollowUpPhotos(inp) {
 async function trackReport() {
   const id = document.getElementById('trackInput').value.trim().toUpperCase();
   const el = document.getElementById('trackResult');
-  if (!id) { el.innerHTML = '<div class="alert alert-warning"><div class="alert-icon">⚠️</div><div>Masukkan nomor tiket terlebih dahulu.</div></div>'; return; }
+  if (!id) { el.innerHTML = '<div class="alert alert-warning"><div class="alert-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div>Masukkan nomor tiket terlebih dahulu.</div></div>'; return; }
   el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-3)">Mencari laporan...</div>';
 
   let t = null;
@@ -1851,7 +1946,12 @@ function showTicketSuccessModal(ticketId) {
     modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:16px';
     modal.innerHTML = `
       <div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.18)">
-        <div style="font-size:48px;margin-bottom:8px">🎉</div>
+        <div style="margin-bottom:8px;display:flex;justify-content:center">
+          <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="36" cy="36" r="34" fill="#e8f5e9" stroke="#27ae60" stroke-width="3"/>
+            <polyline points="20,37 31,48 52,24" fill="none" stroke="#27ae60" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
         <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px">Laporan Berhasil Dikirim!</div>
         <div style="font-size:13px;color:var(--text-3);margin-bottom:20px">Simpan nomor tiket ini untuk memantau status laporan Anda.</div>
         <div style="background:var(--primary-pale,#eaf4fb);border:1.5px dashed var(--primary,#2980b9);border-radius:10px;padding:14px 16px;margin-bottom:20px">
