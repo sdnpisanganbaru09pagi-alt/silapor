@@ -381,12 +381,22 @@ function updateSidebarActive(page) {
 
 function showPage(page) {
   closeMobileNav();
+  const previousActivePage = document.querySelector('.page.active')?.id?.replace('page-', '') || '';
+
   if (PROTECTED_PAGES.includes(page) && !currentUser) {
     page = 'reporter';
   }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   updateSidebarActive(page);
+
+  // Bersihkan input tracking saat user meninggalkan halaman lacak tiket
+  if (previousActivePage === 'tracking' && page !== 'tracking') {
+    const trackInput = document.getElementById('trackInput');
+    const trackResult = document.getElementById('trackResult');
+    if (trackInput) trackInput.value = '';
+    if (trackResult) trackResult.innerHTML = '';
+  }
 
   if (page !== 'reporter') {
     captchaVerified = false;
