@@ -8,7 +8,12 @@ import {
   getDoc,
   getDocs,
   updateDoc,
-  onSnapshot
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+  limit,
+  startAfter
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ============================================================
@@ -39,6 +44,23 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+const TICKET_PAGE_SIZE = 25;
+const DB_DEFAULT = { schools: [], tickets: [], admin: { username: 'admin', passwordHash: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918' } };
+
+if (!window.DB) window.DB = { ...DB_DEFAULT };
+if (!window.DBMeta) {
+  window.DBMeta = {
+    tickets: {
+      context: 'none',
+      schoolId: null,
+      lastVisible: null,
+      hasMore: false,
+      isLoading: false,
+      pageSize: TICKET_PAGE_SIZE
+    }
+  };
+}
+
 // ============================================================
 // STRATEGI HEMAT BANDWIDTH - Strip foto dari cache list
 // ============================================================
@@ -51,22 +73,157 @@ function stripPhotos(t) {
   };
 }
 
+function defaultAdmin() {
+  return { username: 'admin', passwordHash: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918' };
+}
+
+function upsertTicketToCache(ticketLite) {
+  if (!window.DB || !window.DB.tickets) return;
+  const idx = window.DB.tickets.findIndex(t => t.id === ticketLite.id);
+  if (idx === -1) window.DB.tickets.unshift(ticketLite);
+  else window.DB.tickets[idx] = { ...window.DB.tickets[idx], ...ticketLite };
+}
+
+function runTicketRenderHooks() {
+  if (window.currentUser) {
+    if (window.currentUser.type === 'school') {
+      window.renderSchoolTickets && window.renderSchoolTickets();
+      window.updateSchoolStats && window.updateSchoolStats();
+    } else if (window.currentUser.type === 'admin') {
+      window.updateAdminStats && window.updateAdminStats();
+      window.renderAdminRecent && window.renderAdminRecent();
+      window.renderAdminTickets && window.renderAdminTickets();
+      window.renderSchoolTable && window.renderSchoolTable();
+      window.renderUserTable && window.renderUserTable();
+    }
+  }
+}
+
+function buildTicketsQuery({ context, schoolId, lastVisible = null, pageSize = TICKET_PAGE_SIZE }) {
+  const baseRef = collection(db, 'tickets');
+  let q = null;
+
+  if (context === 'school' && schoolId) {
+    q = query(baseRef, where('schoolId', '==', schoolId), orderBy('date', 'desc'), limit(pageSize));
+  } else {
+    q = query(baseRef, orderBy('date', 'desc'), limit(pageSize));
+  }
+
+  if (lastVisible) {
+    q = context === 'school' && schoolId
+      ? query(baseRef, where('schoolId', '==', schoolId), orderBy('date', 'desc'), startAfter(lastVisible), limit(pageSize))
+      : query(baseRef, orderBy('date', 'desc'), startAfter(lastVisible), limit(pageSize));
+  }
+
+  return q;
+}
+
+let _schoolsUnsub = null;
+let _ticketsUnsub = null;
+
+function stopRealtimeListeners() {
+  if (_schoolsUnsub) _schoolsUnsub();
+  if (_ticketsUnsub) _ticketsUnsub();
+  _schoolsUnsub = null;
+  _ticketsUnsub = null;
+}
+
+async function ensureCoreData() {
+  const [schoolsSnap, adminSnap] = await Promise.all([
+    getDocs(collection(db, 'schools')),
+    getDoc(doc(db, 'config', 'admin'))
+  ]);
+
+  window.DB.schools = schoolsSnap.empty ? [] : schoolsSnap.docs.map(d => d.data());
+  window.DB.admin = adminSnap.exists() ? adminSnap.data() : defaultAdmin();
+}
+
+window.fbLoadTicketsPage = async function ({ context = 'admin', schoolId = null, reset = false } = {}) {
+  const meta = window.DBMeta.tickets;
+  if (meta.isLoading) return;
+
+  const contextChanged = meta.context !== context || meta.schoolId !== schoolId;
+  if (reset || contextChanged) {
+    window.DB.tickets = [];
+    meta.lastVisible = null;
+    meta.hasMore = false;
+  }
+
+  meta.context = context;
+  meta.schoolId = schoolId || null;
+  meta.isLoading = true;
+
+  try {
+    const q = buildTicketsQuery({
+      context,
+      schoolId,
+      lastVisible: meta.lastVisible,
+      pageSize: meta.pageSize
+    });
+
+    const snap = await getDocs(q);
+    const rows = snap.empty ? [] : snap.docs.map(d => stripPhotos(d.data()));
+
+    if (!meta.lastVisible) {
+      window.DB.tickets = rows;
+    } else {
+      const existing = new Set(window.DB.tickets.map(t => t.id));
+      const merged = rows.filter(r => !existing.has(r.id));
+      window.DB.tickets = [...window.DB.tickets, ...merged];
+    }
+
+    meta.lastVisible = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : meta.lastVisible;
+    meta.hasMore = snap.docs.length === meta.pageSize;
+    runTicketRenderHooks();
+  } catch (e) {
+    console.error('fbLoadTicketsPage error:', e);
+  } finally {
+    meta.isLoading = false;
+  }
+};
+
+window.fbStartRealtimeForContext = function ({ context = 'public', schoolId = null } = {}) {
+  stopRealtimeListeners();
+
+  _schoolsUnsub = onSnapshot(collection(db, 'schools'), (snap) => {
+    if (!window.DB) return;
+    window.DB.schools = snap.empty ? [] : snap.docs.map(d => d.data());
+  });
+
+  if (context === 'public') return;
+
+  const q = buildTicketsQuery({ context, schoolId, pageSize: TICKET_PAGE_SIZE });
+  _ticketsUnsub = onSnapshot(q, (snap) => {
+    if (!window.DB) return;
+
+    snap.docChanges().forEach(change => {
+      const ticketLite = stripPhotos(change.doc.data());
+      if (change.type === 'removed') {
+        window.DB.tickets = window.DB.tickets.filter(t => t.id !== ticketLite.id);
+      } else {
+        upsertTicketToCache(ticketLite);
+      }
+    });
+
+    runTicketRenderHooks();
+  });
+};
+
+window.fbStopRealtime = stopRealtimeListeners;
+
 // ============================================================
-// INISIALISASI DATA AWAL
+// INISIALISASI DATA AWAL (TANPA MENARIK SEMUA TIKET)
 // ============================================================
 async function initFirebaseDB() {
   showLoadingOverlay(true);
   try {
-    // Cek apakah dokumen admin sudah ada
-    const adminSnap = await getDoc(doc(db, 'config', 'admin'));
+    const adminRef = doc(db, 'config', 'admin');
+    const adminSnap = await getDoc(adminRef);
     if (!adminSnap.exists()) {
-      // Buat data awal jika belum ada
-      await setDoc(doc(db, 'config', 'admin'), {
-        username: "admin",
-        passwordHash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
-      });
+      await setDoc(adminRef, defaultAdmin());
     }
-    await reloadDB();
+
+    await ensureCoreData();
   } catch (e) {
     console.error('Firestore init error:', e);
     showDBError();
@@ -74,28 +231,10 @@ async function initFirebaseDB() {
   showLoadingOverlay(false);
 }
 
-// ============================================================
-// LOAD DB RINGAN KE CACHE LOKAL
-// ============================================================
+// Tetap dipertahankan untuk kompatibilitas lama
 window.reloadDB = async function () {
   try {
-    const [schoolsSnap, adminSnap, ticketsSnap] = await Promise.all([
-      getDocs(collection(db, 'schools')),
-      getDoc(doc(db, 'config', 'admin')),
-      getDocs(collection(db, 'tickets'))
-    ]);
-
-    window.DB = {
-      schools: schoolsSnap.empty
-        ? []
-        : schoolsSnap.docs.map(d => d.data()),
-      tickets: ticketsSnap.empty
-        ? []
-        : ticketsSnap.docs.map(d => stripPhotos(d.data())),
-      admin: adminSnap.exists()
-        ? adminSnap.data()
-        : { username: 'admin', passwordHash: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918' }
-    };
+    await ensureCoreData();
   } catch (e) {
     console.error('reloadDB error:', e);
   }
@@ -120,77 +259,32 @@ window.fbGetTicketFull = async function (id) {
 // ============================================================
 // SIMPAN / UPDATE DATA KE FIRESTORE
 // ============================================================
-
-// Simpan school ke Firestore
 window.fbSaveSchool = async function (school) {
   await setDoc(doc(db, 'schools', school.id), school);
 };
 
-// Simpan ticket baru ke Firestore
 window.fbSaveTicket = async function (ticket) {
   await setDoc(doc(db, 'tickets', ticket.id), ticket);
 };
 
-// Update sebagian field ticket
 window.fbUpdateTicket = async function (id, fields) {
   await updateDoc(doc(db, 'tickets', id), fields);
 };
 
-// Update admin (disimpan di koleksi config, dokumen admin)
 window.fbSaveAdmin = async function (adminObj) {
   await setDoc(doc(db, 'config', 'admin'), adminObj);
 };
 
-// Update sebagian field school
 window.fbUpdateSchool = async function (id, fields) {
   await updateDoc(doc(db, 'schools', id), fields);
 };
-
-// ============================================================
-// REALTIME LISTENERS (onSnapshot)
-// ============================================================
-let _schoolsUnsub = null;
-let _ticketsUnsub = null;
-
-function startRealtimeListeners() {
-  // Hentikan listener lama jika ada
-  if (_schoolsUnsub) _schoolsUnsub();
-  if (_ticketsUnsub) _ticketsUnsub();
-
-  // Listener koleksi schools
-  _schoolsUnsub = onSnapshot(collection(db, 'schools'), (snap) => {
-    if (!window.DB) return;
-    window.DB.schools = snap.empty ? [] : snap.docs.map(d => d.data());
-  });
-
-  // Listener koleksi tickets (tanpa foto untuk hemat bandwidth)
-  _ticketsUnsub = onSnapshot(collection(db, 'tickets'), (snap) => {
-    if (!window.DB) return;
-    window.DB.tickets = snap.empty
-      ? []
-      : snap.docs.map(d => stripPhotos(d.data()));
-
-    // Re-render UI sesuai tipe user yang sedang login
-    if (window.currentUser) {
-      if (window.currentUser.type === 'school') {
-        renderSchoolTickets && renderSchoolTickets();
-        updateSchoolStats && updateSchoolStats();
-      } else if (window.currentUser.type === 'admin') {
-        updateAdminStats && updateAdminStats();
-        renderAdminRecent && renderAdminRecent();
-      }
-    }
-  });
-}
-
-window.startRealtimeListeners = startRealtimeListeners;
 
 // ============================================================
 // JALANKAN INISIALISASI SAAT DOM SIAP
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
   initFirebaseDB().then(() => {
-    startRealtimeListeners();
+    window.fbStartRealtimeForContext({ context: 'public' });
     if (window.restoreLoginState) {
       window.restoreLoginState();
     }

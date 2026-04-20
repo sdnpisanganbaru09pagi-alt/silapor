@@ -43,6 +43,7 @@ async function initDB() {
 }
 
 let currentUser = null;
+window.currentUser = currentUser;
 let schoolTicketFilter = 'all';
 let adminTicketFilter = 'all';
 let captchaA = 0, captchaB = 0;
@@ -137,6 +138,7 @@ function _getInitials(name) {
 function applySchoolState(school) {
   if (!school) return;
   currentUser = { type: 'school', school };
+  window.currentUser = currentUser;
 
   document.getElementById('sidebarPublicNav').classList.add('hidden');
   document.getElementById('sidebarSchoolNav').classList.remove('hidden');
@@ -165,10 +167,13 @@ function applySchoolState(school) {
   renderSchoolTickets();
   updateSchoolStats();
   showPage('school-dash');
+  if (window.fbLoadTicketsPage) window.fbLoadTicketsPage({ context: 'school', schoolId: school.id, reset: true });
+  if (window.fbStartRealtimeForContext) window.fbStartRealtimeForContext({ context: 'school', schoolId: school.id });
 }
 
 function applyAdminState() {
   currentUser = { type: 'admin' };
+  window.currentUser = currentUser;
 
   document.getElementById('sidebarPublicNav').classList.add('hidden');
   document.getElementById('sidebarSchoolNav').classList.add('hidden');
@@ -188,6 +193,8 @@ function applyAdminState() {
   showPage('admin-dash');
   updateAdminStats();
   renderAdminRecent();
+  if (window.fbLoadTicketsPage) window.fbLoadTicketsPage({ context: 'admin', reset: true });
+  if (window.fbStartRealtimeForContext) window.fbStartRealtimeForContext({ context: 'admin' });
 }
 
 function restoreLoginState() {
@@ -410,7 +417,10 @@ function logout() {
   recordActivity('LOGOUT', currentUser ? (currentUser.type === 'school' ? currentUser.school.name : 'Admin') : 'Unknown');
   
   currentUser = null;
+  window.currentUser = currentUser;
   clearSessionUser();
+  if (window.fbStopRealtime) window.fbStopRealtime();
+  if (window.fbStartRealtimeForContext) window.fbStartRealtimeForContext({ context: 'public' });
 
   // Restore public sidebar nav
   document.getElementById('sidebarPublicNav').classList.remove('hidden');
@@ -796,6 +806,37 @@ async function schoolLogin() {
   applySchoolState(school);
 }
 
+
+function renderLoadMoreButton(containerId, context, schoolId = null) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const meta = window.DBMeta?.tickets;
+  if (!meta) return;
+
+  const oldBtn = document.getElementById(containerId + '-load-more');
+  if (oldBtn) oldBtn.remove();
+
+  const isContextMatch = meta.context === context && (context !== 'school' || meta.schoolId === schoolId);
+  if (!isContextMatch || !meta.hasMore) return;
+
+  const btn = document.createElement('button');
+  btn.id = containerId + '-load-more';
+  btn.className = 'btn btn-outline';
+  btn.style.marginTop = '12px';
+  btn.style.width = '100%';
+  btn.textContent = meta.isLoading ? 'Memuat...' : 'Muat lebih banyak';
+  btn.disabled = meta.isLoading;
+  btn.onclick = async () => {
+    btn.disabled = true;
+    btn.textContent = 'Memuat...';
+    if (window.fbLoadTicketsPage) {
+      await window.fbLoadTicketsPage({ context, schoolId, reset: false });
+    }
+    renderLoadMoreButton(containerId, context, schoolId);
+  };
+  container.insertAdjacentElement('afterend', btn);
+}
+
 function updateSchoolStats() {
   if (!currentUser || currentUser.type !== 'school') return;
   const DB = loadDB();
@@ -817,9 +858,11 @@ function renderSchoolTickets() {
   const el = document.getElementById('schoolTicketList');
   if (tickets.length === 0) {
     el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-3)">Tidak ada laporan ditemukan</div>';
+    renderLoadMoreButton('schoolTicketList', 'school', currentUser.school.id);
     return;
   }
   el.innerHTML = tickets.map(t => ticketCard(t, true)).join('');
+  renderLoadMoreButton('schoolTicketList', 'school', currentUser.school.id);
 }
 
 function filterSchoolTickets(status, btn) {
@@ -881,6 +924,7 @@ function renderAdminRecent() {
   const DB = loadDB();
   const tickets = [...DB.tickets].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
   document.getElementById('adminRecentList').innerHTML = tickets.map(t => ticketCard(t, false)).join('') || '<div style="text-align:center;padding:32px;color:var(--text-3)">Belum ada laporan</div>';
+  renderLoadMoreButton('adminRecentList', 'admin');
 }
 
 function renderSchoolTable() {
@@ -911,6 +955,7 @@ function renderAdminTickets() {
   if (q) tickets = tickets.filter(t => t.schoolName.toLowerCase().includes(q) || t.topic.toLowerCase().includes(q) || t.reporter.toLowerCase().includes(q) || t.id.toLowerCase().includes(q));
   tickets.sort((a, b) => new Date(b.date) - new Date(a.date));
   document.getElementById('adminAllTickets').innerHTML = tickets.map(t => ticketCard(t, false)).join('') || '<div style="text-align:center;padding:32px;color:var(--text-3)">Tidak ada laporan</div>';
+  renderLoadMoreButton('adminAllTickets', 'admin');
 }
 
 function filterAdminTickets(status, btn) {
@@ -2241,6 +2286,10 @@ window.renderSchoolTickets = typeof renderSchoolTickets !== 'undefined' ? render
 window.updateSchoolStats = typeof updateSchoolStats !== 'undefined' ? updateSchoolStats : undefined;
 window.updateAdminStats = typeof updateAdminStats !== 'undefined' ? updateAdminStats : undefined;
 window.renderAdminRecent = typeof renderAdminRecent !== 'undefined' ? renderAdminRecent : undefined;
+window.renderAdminTickets = typeof renderAdminTickets !== 'undefined' ? renderAdminTickets : undefined;
+window.renderSchoolTable = typeof renderSchoolTable !== 'undefined' ? renderSchoolTable : undefined;
+window.renderUserTable = typeof renderUserTable !== 'undefined' ? renderUserTable : undefined;
+window.currentUser = currentUser;
 genCaptcha();
 document.getElementById('captchaAns').addEventListener('keyup', function(e) {
   if (e.key === 'Enter') checkCaptchaAuto();
