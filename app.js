@@ -592,6 +592,7 @@ function handlePhotos(inp) {
 const NAME_MAX = 60;
 const WA_MIN = 9;
 const WA_MAX = 15;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 function showFieldHint(hintId, msg, isError) {
   const el = document.getElementById(hintId);
@@ -643,6 +644,25 @@ function filterWAInput(input) {
   }
 }
 
+// Field Email: opsional, tetapi wajib valid jika diisi
+function validateOptionalEmail(input) {
+  const value = input.value.trim();
+  input.value = value;
+
+  if (!value) {
+    showFieldHint('r_email_hint', '', false);
+    return true;
+  }
+
+  if (!EMAIL_PATTERN.test(value)) {
+    showFieldHint('r_email_hint', 'Format email belum valid. Contoh: nama@domain.com', true);
+    return false;
+  }
+
+  showFieldHint('r_email_hint', 'Format email valid.', false);
+  return true;
+}
+
 // ====================== TOPIC CHANGE HANDLER ======================
 function onTopicChange(select) {
   const isBully = select.value === 'Perilaku Tidak Pantas / Bullying';
@@ -662,6 +682,7 @@ function onTopicChange(select) {
 // ====================== SUBMIT REPORT ======================
 function submitReport() {
   const name = document.getElementById('r_name').value.trim();
+  const email = document.getElementById('r_email').value.trim();
   const wa = document.getElementById('r_wa').value.trim();
   const schoolId = document.getElementById('r_school_id').value;
   const schoolName = document.getElementById('r_school_name').value;
@@ -680,6 +701,9 @@ function submitReport() {
   const waDigits = wa.replace(/\D/g, '');
   if (waDigits.length < WA_MIN) return showAlert('reporterAlert', 'danger', `Nomor WhatsApp minimal ${WA_MIN} digit (sekarang ${waDigits.length}).`);
   if (waDigits.length > WA_MAX) return showAlert('reporterAlert', 'danger', `Nomor WhatsApp maksimal ${WA_MAX} digit.`);
+  if (email && !validateOptionalEmail(document.getElementById('r_email'))) {
+    return showAlert('reporterAlert', 'danger', 'Email opsional, namun jika diisi harus menggunakan format yang benar.');
+  }
   if (!schoolId) return showAlert('reporterAlert', 'danger', 'Pilih sekolah dari dropdown.');
   if (!topic) return showAlert('reporterAlert', 'danger', 'Pilih topik permasalahan.');
   if (isBully && !incidentDate) return showAlert('reporterAlert', 'danger', 'Tanggal kejadian wajib diisi untuk laporan bullying.');
@@ -698,7 +722,7 @@ function submitReport() {
 
   collectPhotos().then(async photos => {
     const ticket = {
-      id, reporter: name, email: document.getElementById('r_email').value.trim(),
+      id, reporter: name, email,
       wa, schoolId, schoolName, topic, desc, photos, status: 'Baru',
       date: new Date().toISOString(), incidentDate: incidentDate || null,
       notes: '', followUpPhotos: [], processDate: null, completeDate: null
@@ -710,6 +734,7 @@ function submitReport() {
     // Reset form
     document.getElementById('r_name').value = '';
     document.getElementById('r_email').value = '';
+    showFieldHint('r_email_hint', '', false);
     document.getElementById('r_wa').value = '';
     document.getElementById('schoolSearch').value = '';
     document.getElementById('r_school_id').value = '';
