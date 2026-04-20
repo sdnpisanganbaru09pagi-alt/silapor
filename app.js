@@ -34,6 +34,19 @@ function showDBError() {
 
 function loadDB() { return window.DB; }
 
+function normalizeSchoolId(value) {
+  return String(value ?? '').trim();
+}
+
+function getTicketSchoolId(ticket) {
+  if (!ticket) return '';
+  return normalizeSchoolId(ticket.schoolId || ticket.schoolID || ticket.npsn || ticket.schoolNpsn);
+}
+
+function isTicketForSchool(ticket, schoolId) {
+  return getTicketSchoolId(ticket) === normalizeSchoolId(schoolId);
+}
+
 async function saveDB(db) {
   window.DB = db;
 }
@@ -840,7 +853,7 @@ function renderLoadMoreButton(containerId, context, schoolId = null) {
 function updateSchoolStats() {
   if (!currentUser || currentUser.type !== 'school') return;
   const DB = loadDB();
-  const tickets = DB.tickets.filter(t => t.schoolId === currentUser.school.id);
+  const tickets = DB.tickets.filter(t => isTicketForSchool(t, currentUser.school.id));
   document.getElementById('sTotal').textContent = tickets.length;
   document.getElementById('sNew').textContent = tickets.filter(t => t.status === 'Baru').length;
   document.getElementById('sProc').textContent = tickets.filter(t => t.status === 'Dalam Proses').length;
@@ -851,7 +864,7 @@ function renderSchoolTickets() {
   if (!currentUser || currentUser.type !== 'school') return;
   const DB = loadDB();
   const q = (document.getElementById('schoolTicketSearch').value || '').toLowerCase();
-  let tickets = DB.tickets.filter(t => t.schoolId === currentUser.school.id);
+  let tickets = DB.tickets.filter(t => isTicketForSchool(t, currentUser.school.id));
   if (schoolTicketFilter !== 'all') tickets = tickets.filter(t => t.status === schoolTicketFilter);
   if (q) tickets = tickets.filter(t => t.desc.toLowerCase().includes(q) || t.topic.toLowerCase().includes(q) || t.reporter.toLowerCase().includes(q));
   tickets.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -932,7 +945,7 @@ function renderSchoolTable() {
   const q = (document.getElementById('schoolListSearch').value || '').toLowerCase();
   const schools = DB.schools.filter(s => s.name.toLowerCase().includes(q) || s.id.includes(q));
   document.getElementById('schoolTableBody').innerHTML = schools.map(s => {
-    const cnt = DB.tickets.filter(t => t.schoolId === s.id).length;
+    const cnt = DB.tickets.filter(t => isTicketForSchool(t, s.id)).length;
     return `<tr>
       <td><code style="background:var(--neutral);padding:2px 6px;border-radius:4px;font-size:12px">${s.id}</code></td>
       <td><strong>${s.name}</strong></td>
@@ -1688,7 +1701,7 @@ async function printTicketsPDF() {
   let subJudul = '';
 
   if (currentUser && currentUser.type === 'school') {
-    tickets = DB.tickets.filter(t => t.schoolId === currentUser.school.id);
+    tickets = DB.tickets.filter(t => isTicketForSchool(t, currentUser.school.id));
     if (schoolTicketFilter !== 'all') tickets = tickets.filter(t => t.status === schoolTicketFilter);
     judulLaporan = 'Laporan Pengaduan Sekolah';
     subJudul = currentUser.school.name + ' · NPSN: ' + currentUser.school.id;
