@@ -46,7 +46,8 @@ body {
   font-size: 15px;
   line-height: 1.6;
   color: var(--text);
-  background: var(--white);
+  background:
+    linear-gradient(135deg, #25bfc2 0%, #20aac6 32%, #1f8fca 62%, #2468ba 100%);
   min-height: 100vh;
 }
 
@@ -329,6 +330,29 @@ body {
   align-items: center;
   overflow-x: hidden;   /* cegah konten child melebar layar */
   min-width: 0;
+  position: relative;
+  isolation: isolate;
+}
+
+.main-content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: .7;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255,255,255,0.12) 0 120px,
+      rgba(255,255,255,0.02) 120px 250px
+    ),
+    repeating-linear-gradient(
+      135deg,
+      rgba(8,70,139,0.24) 0 70px,
+      rgba(8,70,139,0) 70px 200px
+    ),
+    linear-gradient(135deg, rgba(43,204,191,0.2) 0%, rgba(38,150,208,0.18) 50%, rgba(28,95,184,0.24) 100%);
 }
 
 /* ---- Pages ---- */
