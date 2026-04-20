@@ -240,7 +240,9 @@ window.fbStartRealtimeForContext = function ({ context = 'public', schoolId = nu
 
   if (context === 'public') return;
 
-  const q = buildTicketsQuery({ context, schoolId, pageSize: TICKET_PAGE_SIZE });
+  const q = context === 'school'
+    ? buildTicketsQuery({ context: 'admin', pageSize: TICKET_PAGE_SIZE })
+    : buildTicketsQuery({ context, schoolId, pageSize: TICKET_PAGE_SIZE });
   _ticketsUnsub = onSnapshot(q, (snap) => {
     if (!window.DB) return;
 
@@ -249,6 +251,7 @@ window.fbStartRealtimeForContext = function ({ context = 'public', schoolId = nu
       if (change.type === 'removed') {
         window.DB.tickets = window.DB.tickets.filter(t => t.id !== ticketLite.id);
       } else {
+        if (context === 'school' && !isTicketForSchool(ticketLite, schoolId)) return;
         upsertTicketToCache(ticketLite);
       }
     });
