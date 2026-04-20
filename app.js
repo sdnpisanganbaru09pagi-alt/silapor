@@ -2126,10 +2126,10 @@ async function trackReport() {
       </div>
       <div class="steps" style="margin-bottom:12px">
         ${steps.map(s => `
-          <div class="step ${s.done ? 'done' : ''}" style="flex-direction:column;align-items:center;gap:2px">
+          <div class="step ${s.done ? 'done' : ''}" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;padding:10px 8px;min-height:88px">
             <span class="step-num">${s.done ? '✓' : ''}</span>
-            <span>${s.label}</span>
-            ${s.done && s.sub ? `<span style="font-size:9px;color:${s.done ? 'var(--primary)' : 'var(--text-3)'};opacity:0.75;text-align:center;line-height:1.3;margin-top:1px">${s.sub}</span>` : ''}
+            <span style="font-size:11px;font-weight:600;line-height:1.25;text-align:center">${s.label}</span>
+            <span style="font-size:10px;color:${s.done ? 'var(--primary)' : 'var(--text-3)'};opacity:0.85;text-align:center;line-height:1.35;min-height:28px;display:flex;align-items:flex-start;justify-content:center">${s.done && s.sub ? s.sub : '&nbsp;'}</span>
           </div>`).join('')}
       </div>
       ${t.incidentDate ? `<div style="background:#fff7f4;border:1px solid #f5c2b7;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:var(--danger);display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Tanggal kejadian: <strong>${new Date(t.incidentDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</strong></div>` : ''}
