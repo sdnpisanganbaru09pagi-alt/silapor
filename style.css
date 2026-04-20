@@ -347,12 +347,74 @@ body {
 footer {
   width: 100%;
   margin-top: auto;
-  padding: 20px 24px;
-  background: var(--neutral);
-  border-top: 1px solid var(--border);
+  padding: 28px 24px 20px;
+  background: #1e2d3d;
+  border-top: 3px solid #2e86c1;
   text-align: center;
   font-size: 12px;
-  color: var(--text-2);
+  color: #a8bdd0;
+}
+
+footer p {
+  color: #a8bdd0;
+}
+
+.footer-label {
+  font-size: 11px;
+  color: #7fa8c9 !important;
+  letter-spacing: 0.3px;
+}
+
+.footer-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e8f4fd !important;
+  margin-top: 4px;
+  letter-spacing: 0.2px;
+}
+
+.footer-logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+
+.footer-logo {
+  height: 68px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4)) brightness(1.05);
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.footer-logo:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5)) brightness(1.15);
+}
+
+.footer-logo--wide {
+  height: 44px;
+}
+
+.footer-dev-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7fa8c9 !important;
+}
+
+.footer-dev-names {
+  font-size: 11px;
+  color: #c8dff0 !important;
+  margin-top: 3px;
+}
+
+.footer-copy {
+  font-size: 10px;
+  color: #5a7a96 !important;
+  margin-top: 8px;
 }
 
 /* ============================================================
@@ -1290,6 +1352,19 @@ tr:hover td { background: #fafbfe }
   .modal {
     padding: 18px 14px;
     border-radius: 12px;
+  }
+
+  /* Footer logo mengecil di smartphone */
+  .footer-logo {
+    height: 44px;
+  }
+
+  .footer-logo--wide {
+    height: 28px;
+  }
+
+  .footer-logos {
+    gap: 14px;
   }
 }
 
