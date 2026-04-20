@@ -270,6 +270,13 @@ function resetSessionTimer() {
   initSessionTimeout();
 }
 
+function removeLegacySchoolRefreshButton() {
+  const byId = document.getElementById('schoolRefreshBtn');
+  if (byId) byId.remove();
+
+  document.querySelectorAll('button[onclick*="refreshSchoolTickets"]').forEach(btn => btn.remove());
+}
+
 // ====================== SECURITY: Login Attempt Limiter ======================
 function recordLoginAttempt(identifier, success = false) {
   try {
@@ -2330,6 +2337,7 @@ window.renderAdminTickets = typeof renderAdminTickets !== 'undefined' ? renderAd
 window.renderSchoolTable = typeof renderSchoolTable !== 'undefined' ? renderSchoolTable : undefined;
 window.renderUserTable = typeof renderUserTable !== 'undefined' ? renderUserTable : undefined;
 window.currentUser = currentUser;
+removeLegacySchoolRefreshButton();
 genCaptcha();
 document.getElementById('captchaAns').addEventListener('keyup', function(e) {
   if (e.key === 'Enter') checkCaptchaAuto();
