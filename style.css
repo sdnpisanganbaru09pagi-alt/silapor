@@ -46,7 +46,9 @@ body {
   font-size: 15px;
   line-height: 1.6;
   color: var(--text);
-  background: var(--white);
+  background:
+    linear-gradient(140deg, rgba(46, 134, 193, 0.24) 0%, rgba(26, 82, 118, 0.16) 42%, rgba(26, 82, 118, 0.05) 100%),
+    linear-gradient(180deg, #eaf4ff 0%, #f3f8fd 48%, #f8fbff 100%);
   min-height: 100vh;
 }
 
@@ -329,6 +331,29 @@ body {
   align-items: center;
   overflow-x: hidden;   /* cegah konten child melebar layar */
   min-width: 0;
+  position: relative;
+  isolation: isolate;
+}
+
+.main-content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: .55;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(26,82,118,0.05) 0 10px,
+      rgba(255,255,255,0.12) 10px 20px
+    ),
+    repeating-linear-gradient(
+      45deg,
+      rgba(26,82,118,0.035) 0 8px,
+      rgba(255,255,255,0) 8px 16px
+    ),
+    linear-gradient(140deg, rgba(127,185,231,0.24) 0%, rgba(46,134,193,0.06) 55%, rgba(26,82,118,0.02) 100%);
 }
 
 /* ---- Pages ---- */
