@@ -77,6 +77,26 @@ function defaultAdmin() {
   return { username: 'admin', passwordHash: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918' };
 }
 
+function normalizeSchoolId(value) {
+  return String(value ?? '').trim();
+}
+
+function getTicketSchoolId(ticket) {
+  if (!ticket) return '';
+  return normalizeSchoolId(ticket.schoolId || ticket.schoolID || ticket.npsn || ticket.schoolNpsn);
+}
+
+function buildSchoolIdCandidates(schoolId) {
+  const normalized = normalizeSchoolId(schoolId);
+  if (!normalized) return [];
+  const candidates = [normalized];
+  const numeric = Number(normalized);
+  if (!Number.isNaN(numeric) && Number.isFinite(numeric)) {
+    candidates.push(numeric);
+  }
+  return candidates;
+}
+
 function upsertTicketToCache(ticketLite) {
   if (!window.DB || !window.DB.tickets) return;
   const idx = window.DB.tickets.findIndex(t => t.id === ticketLite.id);
@@ -118,6 +138,29 @@ function buildTicketsQuery({ context, schoolId, lastVisible = null, pageSize = T
   return q;
 }
 
+async function fetchSchoolTicketsByCandidates({ schoolId, pageSize = TICKET_PAGE_SIZE }) {
+  const candidates = buildSchoolIdCandidates(schoolId);
+  if (candidates.length === 0) return [];
+
+  const baseRef = collection(db, 'tickets');
+  const rows = [];
+  const seenIds = new Set();
+
+  for (const candidate of candidates) {
+    const q = query(baseRef, where('schoolId', '==', candidate), orderBy('date', 'desc'), limit(pageSize));
+    const snap = await getDocs(q);
+    snap.docs.forEach(d => {
+      const row = stripPhotos(d.data());
+      if (seenIds.has(row.id)) return;
+      seenIds.add(row.id);
+      rows.push(row);
+    });
+  }
+
+  rows.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return rows;
+}
+
 let _schoolsUnsub = null;
 let _ticketsUnsub = null;
 
@@ -154,15 +197,20 @@ window.fbLoadTicketsPage = async function ({ context = 'admin', schoolId = null,
   meta.isLoading = true;
 
   try {
-    const q = buildTicketsQuery({
-      context,
-      schoolId,
-      lastVisible: meta.lastVisible,
-      pageSize: meta.pageSize
-    });
-
-    const snap = await getDocs(q);
-    const rows = snap.empty ? [] : snap.docs.map(d => stripPhotos(d.data()));
+    let snap = null;
+    let rows = [];
+    if (context === 'school' && !meta.lastVisible) {
+      rows = await fetchSchoolTicketsByCandidates({ schoolId, pageSize: meta.pageSize });
+    } else {
+      const q = buildTicketsQuery({
+        context,
+        schoolId,
+        lastVisible: meta.lastVisible,
+        pageSize: meta.pageSize
+      });
+      snap = await getDocs(q);
+      rows = snap.empty ? [] : snap.docs.map(d => stripPhotos(d.data()));
+    }
 
     if (!meta.lastVisible) {
       window.DB.tickets = rows;
@@ -172,8 +220,8 @@ window.fbLoadTicketsPage = async function ({ context = 'admin', schoolId = null,
       window.DB.tickets = [...window.DB.tickets, ...merged];
     }
 
-    meta.lastVisible = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : meta.lastVisible;
-    meta.hasMore = snap.docs.length === meta.pageSize;
+    meta.lastVisible = snap && snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : meta.lastVisible;
+    meta.hasMore = !!snap && snap.docs.length === meta.pageSize;
     runTicketRenderHooks();
   } catch (e) {
     console.error('fbLoadTicketsPage error:', e);
@@ -210,6 +258,21 @@ window.fbStartRealtimeForContext = function ({ context = 'public', schoolId = nu
 };
 
 window.fbStopRealtime = stopRealtimeListeners;
+
+window.fbRefreshSchoolTickets = async function (schoolId) {
+  if (!window.DB) return;
+  const rows = await fetchSchoolTicketsByCandidates({ schoolId, pageSize: 100 });
+  const normalizedSchoolId = normalizeSchoolId(schoolId);
+  window.DB.tickets = rows.filter(t => getTicketSchoolId(t) === normalizedSchoolId);
+
+  if (window.DBMeta && window.DBMeta.tickets) {
+    window.DBMeta.tickets.context = 'school';
+    window.DBMeta.tickets.schoolId = normalizedSchoolId;
+    window.DBMeta.tickets.lastVisible = null;
+    window.DBMeta.tickets.hasMore = false;
+  }
+  runTicketRenderHooks();
+};
 
 // ============================================================
 // INISIALISASI DATA AWAL (TANPA MENARIK SEMUA TIKET)
