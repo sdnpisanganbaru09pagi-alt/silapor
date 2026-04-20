@@ -892,6 +892,33 @@ function filterSchoolTickets(status, btn) {
   renderSchoolTickets();
 }
 
+async function refreshSchoolTickets() {
+  if (!currentUser || currentUser.type !== 'school') return;
+  const refreshBtn = document.getElementById('schoolRefreshBtn');
+  if (refreshBtn) {
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = 'Menyegarkan...';
+  }
+  try {
+    if (window.fbRefreshSchoolTickets) {
+      await window.fbRefreshSchoolTickets(currentUser.school.id);
+    } else if (window.fbLoadTicketsPage) {
+      await window.fbLoadTicketsPage({ context: 'school', schoolId: currentUser.school.id, reset: true });
+    }
+    renderSchoolTickets();
+    updateSchoolStats();
+    showAlert('schoolDashAlert', 'success', 'Data laporan sekolah berhasil disegarkan.');
+  } catch (e) {
+    console.error('refreshSchoolTickets error:', e);
+    showAlert('schoolDashAlert', 'danger', 'Gagal menyegarkan data laporan sekolah. Silakan coba lagi.');
+  } finally {
+    if (refreshBtn) {
+      refreshBtn.disabled = false;
+      refreshBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.13-3.36L23 10M1 14l5.36 4.36A9 9 0 0020.49 15"/></svg> Refresh Data';
+    }
+  }
+}
+
 // ====================== ADMIN LOGIN ======================
 async function adminLogin() {
   const user = document.getElementById('al_user').value.trim();
