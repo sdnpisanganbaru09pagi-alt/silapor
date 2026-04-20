@@ -86,10 +86,12 @@ function upsertTicketToCache(ticketLite) {
 
 function runTicketRenderHooks() {
   const session = getSessionUser();
-  if (session?.type === 'school') {
+  const activeUser = window.currentUser || session;
+
+  if (activeUser?.type === 'school') {
     window.renderSchoolTickets && window.renderSchoolTickets();
     window.updateSchoolStats && window.updateSchoolStats();
-  } else if (session?.type === 'admin') {
+  } else if (activeUser?.type === 'admin') {
     window.updateAdminStats && window.updateAdminStats();
     window.renderAdminRecent && window.renderAdminRecent();
     window.renderAdminTickets && window.renderAdminTickets();
@@ -107,21 +109,23 @@ function getSessionUser() {
   }
 }
 
-function buildTicketsQuery({ context, schoolId, lastVisible = null, pageSize = TICKET_PAGE_SIZE }) {
+function buildTicketsQuery({ context, schoolId, lastVisible = null, pageSize = TICKET_PAGE_SIZE, schoolOrderByDate = true }) {
   const baseRef = collection(db, 'tickets');
   let q = null;
 
   if (context === 'school' && schoolId) {
-    // Hindari kebutuhan composite index (schoolId + date) agar dashboard sekolah tetap ter-load
-    // di project yang belum membuat index tersebut.
-    q = query(baseRef, where('schoolId', '==', schoolId), limit(pageSize));
+    q = schoolOrderByDate
+      ? query(baseRef, where('schoolId', '==', schoolId), orderBy('date', 'desc'), limit(pageSize))
+      : query(baseRef, where('schoolId', '==', schoolId), limit(pageSize));
   } else {
     q = query(baseRef, orderBy('date', 'desc'), limit(pageSize));
   }
 
   if (lastVisible) {
     q = context === 'school' && schoolId
-      ? query(baseRef, where('schoolId', '==', schoolId), startAfter(lastVisible), limit(pageSize))
+      ? (schoolOrderByDate
+        ? query(baseRef, where('schoolId', '==', schoolId), orderBy('date', 'desc'), startAfter(lastVisible), limit(pageSize))
+        : query(baseRef, where('schoolId', '==', schoolId), startAfter(lastVisible), limit(pageSize)))
       : query(baseRef, orderBy('date', 'desc'), startAfter(lastVisible), limit(pageSize));
   }
 
@@ -157,27 +161,24 @@ window.fbLoadTicketsPage = async function ({ context = 'admin', schoolId = null,
     window.DB.tickets = [];
     meta.lastVisible = null;
     meta.hasMore = false;
+    if (context === 'school') meta.schoolOrderByDate = true;
   }
 
   meta.context = context;
   meta.schoolId = schoolId || null;
+  if (typeof meta.schoolOrderByDate !== 'boolean') meta.schoolOrderByDate = true;
   meta.isLoading = true;
 
   try {
-    let q = buildTicketsQuery({
+    const q = buildTicketsQuery({
       context,
       schoolId,
       lastVisible: meta.lastVisible,
-      pageSize: meta.pageSize
+      pageSize: meta.pageSize,
+      schoolOrderByDate: meta.schoolOrderByDate
     });
 
-    let snap = await getDocs(q);
-
-    // Fallback: beberapa data lama bisa tidak punya field "date" / belum ada index orderBy.
-    // Jika query gagal, coba query tanpa orderBy agar data tidak hilang setelah refresh.
-    if (!snap) {
-      throw new Error('Failed to load ticket page');
-    }
+    const snap = await getDocs(q);
     const rows = snap.empty ? [] : snap.docs.map(d => stripPhotos(d.data()));
 
     if (!meta.lastVisible) {
@@ -193,31 +194,31 @@ window.fbLoadTicketsPage = async function ({ context = 'admin', schoolId = null,
     runTicketRenderHooks();
   } catch (e) {
     console.error('fbLoadTicketsPage error:', e);
-    try {
-      // fallback aman: tanpa orderBy, tetap bisa paginate by doc snapshot
-      const meta = window.DBMeta.tickets;
-      let fallbackQ = context === 'school' && schoolId
-        ? query(collection(db, 'tickets'), where('schoolId', '==', schoolId), limit(meta.pageSize))
-        : query(collection(db, 'tickets'), limit(meta.pageSize));
-
-      if (meta.lastVisible) {
-        fallbackQ = context === 'school' && schoolId
-          ? query(collection(db, 'tickets'), where('schoolId', '==', schoolId), startAfter(meta.lastVisible), limit(meta.pageSize))
-          : query(collection(db, 'tickets'), startAfter(meta.lastVisible), limit(meta.pageSize));
+    // fallback khusus school: jika query by school + orderBy date butuh composite index dan gagal,
+    // downgrade ke query tanpa orderBy supaya data tetap muncul.
+    if (context === 'school' && meta.schoolOrderByDate) {
+      try {
+        meta.schoolOrderByDate = false;
+        const fallbackQ = buildTicketsQuery({
+          context,
+          schoolId,
+          lastVisible: meta.lastVisible,
+          pageSize: meta.pageSize,
+          schoolOrderByDate: false
+        });
+        const fallbackSnap = await getDocs(fallbackQ);
+        const rows = fallbackSnap.empty ? [] : fallbackSnap.docs.map(d => stripPhotos(d.data()));
+        if (!meta.lastVisible) window.DB.tickets = rows;
+        else {
+          const existing = new Set(window.DB.tickets.map(t => t.id));
+          window.DB.tickets = [...window.DB.tickets, ...rows.filter(r => !existing.has(r.id))];
+        }
+        meta.lastVisible = fallbackSnap.docs.length > 0 ? fallbackSnap.docs[fallbackSnap.docs.length - 1] : meta.lastVisible;
+        meta.hasMore = fallbackSnap.docs.length === meta.pageSize;
+        runTicketRenderHooks();
+      } catch (fallbackErr) {
+        console.error('fbLoadTicketsPage fallback error:', fallbackErr);
       }
-
-      const fallbackSnap = await getDocs(fallbackQ);
-      const rows = fallbackSnap.empty ? [] : fallbackSnap.docs.map(d => stripPhotos(d.data()));
-      if (!meta.lastVisible) window.DB.tickets = rows;
-      else {
-        const existing = new Set(window.DB.tickets.map(t => t.id));
-        window.DB.tickets = [...window.DB.tickets, ...rows.filter(r => !existing.has(r.id))];
-      }
-      meta.lastVisible = fallbackSnap.docs.length > 0 ? fallbackSnap.docs[fallbackSnap.docs.length - 1] : meta.lastVisible;
-      meta.hasMore = fallbackSnap.docs.length === meta.pageSize;
-      runTicketRenderHooks();
-    } catch (fallbackErr) {
-      console.error('fbLoadTicketsPage fallback error:', fallbackErr);
     }
   } finally {
     meta.isLoading = false;
@@ -234,7 +235,12 @@ window.fbStartRealtimeForContext = function ({ context = 'public', schoolId = nu
 
   if (context === 'public') return;
 
-  const q = buildTicketsQuery({ context, schoolId, pageSize: TICKET_PAGE_SIZE });
+  const q = buildTicketsQuery({
+    context,
+    schoolId,
+    pageSize: TICKET_PAGE_SIZE,
+    schoolOrderByDate: window.DBMeta?.tickets?.schoolOrderByDate !== false
+  });
   _ticketsUnsub = onSnapshot(q, (snap) => {
     if (!window.DB) return;
 
