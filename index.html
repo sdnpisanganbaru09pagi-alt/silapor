@@ -166,7 +166,8 @@
       </div>
       <div class="form-group">
         <label>Email</label>
-        <input type="email" id="r_email" placeholder="email@contoh.com">
+        <input type="email" id="r_email" placeholder="email@contoh.com" oninput="validateOptionalEmail(this)">
+        <div class="field-hint" id="r_email_hint" style="display:none"></div>
       </div>
     </div>
     <div class="form-group">

@@ -381,12 +381,22 @@ function updateSidebarActive(page) {
 
 function showPage(page) {
   closeMobileNav();
+  const previousActivePage = document.querySelector('.page.active')?.id?.replace('page-', '') || '';
+
   if (PROTECTED_PAGES.includes(page) && !currentUser) {
     page = 'reporter';
   }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   updateSidebarActive(page);
+
+  // Bersihkan input tracking saat user meninggalkan halaman lacak tiket
+  if (previousActivePage === 'tracking' && page !== 'tracking') {
+    const trackInput = document.getElementById('trackInput');
+    const trackResult = document.getElementById('trackResult');
+    if (trackInput) trackInput.value = '';
+    if (trackResult) trackResult.innerHTML = '';
+  }
 
   if (page !== 'reporter') {
     captchaVerified = false;
@@ -592,6 +602,7 @@ function handlePhotos(inp) {
 const NAME_MAX = 60;
 const WA_MIN = 9;
 const WA_MAX = 15;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 function showFieldHint(hintId, msg, isError) {
   const el = document.getElementById(hintId);
@@ -643,6 +654,25 @@ function filterWAInput(input) {
   }
 }
 
+// Field Email: opsional, tetapi wajib valid jika diisi
+function validateOptionalEmail(input) {
+  const value = input.value.trim();
+  input.value = value;
+
+  if (!value) {
+    showFieldHint('r_email_hint', '', false);
+    return true;
+  }
+
+  if (!EMAIL_PATTERN.test(value)) {
+    showFieldHint('r_email_hint', 'Format email belum valid. Contoh: nama@domain.com', true);
+    return false;
+  }
+
+  showFieldHint('r_email_hint', 'Format email valid.', false);
+  return true;
+}
+
 // ====================== TOPIC CHANGE HANDLER ======================
 function onTopicChange(select) {
   const isBully = select.value === 'Perilaku Tidak Pantas / Bullying';
@@ -662,6 +692,7 @@ function onTopicChange(select) {
 // ====================== SUBMIT REPORT ======================
 function submitReport() {
   const name = document.getElementById('r_name').value.trim();
+  const email = document.getElementById('r_email').value.trim();
   const wa = document.getElementById('r_wa').value.trim();
   const schoolId = document.getElementById('r_school_id').value;
   const schoolName = document.getElementById('r_school_name').value;
@@ -680,6 +711,9 @@ function submitReport() {
   const waDigits = wa.replace(/\D/g, '');
   if (waDigits.length < WA_MIN) return showAlert('reporterAlert', 'danger', `Nomor WhatsApp minimal ${WA_MIN} digit (sekarang ${waDigits.length}).`);
   if (waDigits.length > WA_MAX) return showAlert('reporterAlert', 'danger', `Nomor WhatsApp maksimal ${WA_MAX} digit.`);
+  if (email && !validateOptionalEmail(document.getElementById('r_email'))) {
+    return showAlert('reporterAlert', 'danger', 'Email opsional, namun jika diisi harus menggunakan format yang benar.');
+  }
   if (!schoolId) return showAlert('reporterAlert', 'danger', 'Pilih sekolah dari dropdown.');
   if (!topic) return showAlert('reporterAlert', 'danger', 'Pilih topik permasalahan.');
   if (isBully && !incidentDate) return showAlert('reporterAlert', 'danger', 'Tanggal kejadian wajib diisi untuk laporan bullying.');
@@ -698,7 +732,7 @@ function submitReport() {
 
   collectPhotos().then(async photos => {
     const ticket = {
-      id, reporter: name, email: document.getElementById('r_email').value.trim(),
+      id, reporter: name, email,
       wa, schoolId, schoolName, topic, desc, photos, status: 'Baru',
       date: new Date().toISOString(), incidentDate: incidentDate || null,
       notes: '', followUpPhotos: [], processDate: null, completeDate: null
@@ -710,6 +744,7 @@ function submitReport() {
     // Reset form
     document.getElementById('r_name').value = '';
     document.getElementById('r_email').value = '';
+    showFieldHint('r_email_hint', '', false);
     document.getElementById('r_wa').value = '';
     document.getElementById('schoolSearch').value = '';
     document.getElementById('r_school_id').value = '';
@@ -1301,11 +1336,24 @@ function openTicket(id, isSchool) {
         </div>
       </div>` : '';
 
-    const processPhotosHTML = t.followUpPhotos && t.followUpPhotos.length > 0 ? `
+    const processNotes = t.processNotes || t.notes || '';
+    const completeNotes = t.completeNotes || '';
+    const processPhotos = Array.isArray(t.processPhotos) ? t.processPhotos : (Array.isArray(t.followUpPhotos) ? t.followUpPhotos : []);
+    const completePhotos = Array.isArray(t.completePhotos) ? t.completePhotos : (t.status === 'Selesai' ? (Array.isArray(t.followUpPhotos) ? t.followUpPhotos : []) : []);
+
+    const processPhotosHTML = processPhotos.length > 0 ? `
       <div style="margin-top:12px">
         <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;font-weight:600;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto Tindak Lanjut</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-          ${t.followUpPhotos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
+          ${processPhotos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
+        </div>
+      </div>` : '';
+
+    const completePhotosHTML = completePhotos.length > 0 ? `
+      <div style="margin-top:12px">
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;font-weight:600;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto Penyelesaian</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          ${completePhotos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
         </div>
       </div>` : '';
 
@@ -1351,9 +1399,9 @@ function openTicket(id, isSchool) {
         <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Status Diubah: ${processDate}</div>
         <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
           <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Catatan Tindak Lanjut</div>
-          <div style="line-height:1.6;font-size:13px;color:var(--text);word-break:break-word;overflow-wrap:anywhere">${t.notes || '(Belum ada catatan)'}</div>
+          <div style="line-height:1.6;font-size:13px;color:var(--text);word-break:break-word;overflow-wrap:anywhere">${processNotes || '(Belum ada catatan)'}</div>
         </div>
-        ${processPhotosHTML && t.status === 'Dalam Proses' ? processPhotosHTML : ''}
+        ${processPhotosHTML}
       </div>
       ` : ''}
 
@@ -1364,16 +1412,17 @@ function openTicket(id, isSchool) {
         <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Selesai: ${completeDate}</div>
         <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid #a9dfbf">
           <div style="font-size:12px;color:var(--success);margin-bottom:4px;font-weight:600">Laporan ini telah selesai ditangani oleh pihak sekolah.</div>
+          <div style="line-height:1.6;font-size:13px;color:var(--text);word-break:break-word;overflow-wrap:anywhere">${completeNotes || '(Tidak ada catatan penyelesaian.)'}</div>
         </div>
-        ${processPhotosHTML}
+        ${completePhotosHTML}
       </div>
       ` : ''}
 
       ${isSchool && t.status !== 'Selesai' ? `
       <!-- FORM AKSI (Untuk sekolah yang belum selesai) -->
       <div style="border-top:2px solid var(--border);padding-top:16px;margin-top:16px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--primary);display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Catatan Tindak Lanjut</div>
-        <textarea id="ticketNotes" placeholder="Tuliskan langkah tindak lanjut yang telah dilakukan..." style="margin-bottom:12px;min-height:80px;width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:inherit">${t.notes || ''}</textarea>
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--primary);display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> ${t.status === 'Baru' ? 'Catatan Proses' : 'Catatan Penyelesaian'}</div>
+        <textarea id="ticketNotes" placeholder="${t.status === 'Baru' ? 'Tuliskan langkah tindak lanjut yang telah dilakukan...' : 'Tuliskan hasil akhir penyelesaian laporan...'}" style="margin-bottom:12px;min-height:80px;width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:inherit">${t.status === 'Baru' ? processNotes : completeNotes}</textarea>
         
         <div style="font-size:12px;color:var(--text-3);margin-bottom:12px;background:var(--neutral);padding:10px;border-radius:6px">
           ${t.status === 'Baru' ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Foto tindak lanjut opsional saat memproses laporan.' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Foto tindak lanjut wajib untuk menyelesaikan laporan.'}
@@ -1416,10 +1465,13 @@ function updateStatusModal(id, status) {
   const DB = loadDB();
   const t = DB.tickets.find(x => x.id === id);
   if (!t) return;
-  const hasExistingFollowUp = Array.isArray(t.followUpPhotos) && t.followUpPhotos.length > 0;
-  if (status === 'Selesai' && !photoUpdates && !hasExistingFollowUp) return alert('Harap lampirkan minimal 1 foto tindak lanjut.');
+  const hasExistingProcessPhotos = (Array.isArray(t.processPhotos) && t.processPhotos.length > 0)
+    || (Array.isArray(t.followUpPhotos) && t.followUpPhotos.length > 0);
+  const hasExistingCompletePhotos = Array.isArray(t.completePhotos) && t.completePhotos.length > 0;
+  if (status === 'Selesai' && !photoUpdates && !hasExistingProcessPhotos && !hasExistingCompletePhotos) {
+    return alert('Harap lampirkan minimal 1 foto tindak lanjut.');
+  }
   
-  const statusLabel = status === 'Dalam Proses' ? 'Proses Laporan' : 'Selesaikan Laporan';
   const confirmMsg = status === 'Dalam Proses' 
     ? 'Anda akan mengubah status laporan menjadi "Dalam Proses". Pastikan catatan dan lampiran sudah benar.\n\nLanjutkan?'
     : 'Anda akan menyelesaikan laporan. Status tidak bisa diubah setelah ini.\n\nLanjutkan?';
@@ -1428,10 +1480,42 @@ function updateStatusModal(id, status) {
   
   (async () => {
     t.status = status;
-    t.notes = notes;
-    if (photoUpdates) {
-      t.followUpPhotos = photoUpdates;
+
+    const updatePayload = { status };
+
+    if (status === 'Dalam Proses') {
+      t.processNotes = notes;
+      t.notes = notes; // backward compatibility
+      updatePayload.processNotes = notes;
+      updatePayload.notes = notes;
+
+      if (photoUpdates) {
+        t.processPhotos = photoUpdates;
+        t.followUpPhotos = photoUpdates; // backward compatibility
+        updatePayload.processPhotos = photoUpdates;
+        updatePayload.followUpPhotos = photoUpdates;
+      }
     }
+
+    if (status === 'Selesai') {
+      t.completeNotes = notes;
+      updatePayload.completeNotes = notes;
+
+      if (photoUpdates) {
+        t.completePhotos = photoUpdates;
+        t.followUpPhotos = photoUpdates; // data terbaru untuk tampilan publik lama
+        updatePayload.completePhotos = photoUpdates;
+        updatePayload.followUpPhotos = photoUpdates;
+      } else if (!hasExistingCompletePhotos && hasExistingProcessPhotos) {
+        // Pertahankan snapshot penyelesaian jika sekolah tidak unggah ulang foto saat finalisasi
+        const fallbackCompletePhotos = Array.isArray(t.processPhotos) && t.processPhotos.length > 0
+          ? t.processPhotos
+          : (Array.isArray(t.followUpPhotos) ? t.followUpPhotos : []);
+        t.completePhotos = fallbackCompletePhotos;
+        updatePayload.completePhotos = fallbackCompletePhotos;
+      }
+    }
+
     // Catat timestamp untuk proses dan penyelesaian
     const now = new Date().toISOString();
     if (status === 'Dalam Proses' && !t.processDate) {
@@ -1440,8 +1524,8 @@ function updateStatusModal(id, status) {
     if (status === 'Selesai' && !t.completeDate) {
       t.completeDate = now;
     }
-    const updatePayload = { status, notes, processDate: t.processDate, completeDate: t.completeDate };
-    if (photoUpdates) updatePayload.followUpPhotos = photoUpdates;
+    updatePayload.processDate = t.processDate;
+    updatePayload.completeDate = t.completeDate;
     if (window.fbUpdateTicket) await window.fbUpdateTicket(id, updatePayload);
     followUpPhotoFiles = [];
     closeModal('ticketModal');
@@ -1899,30 +1983,83 @@ async function trackReport() {
     { label: 'Selesai',          sub: completeDate, done: t.status === 'Selesai' }
   ];
 
-  const descAndPhotosHTML = `
-    <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid var(--border)">
-      <div style="font-size:11px;color:var(--text-3);font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:5px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Deskripsi Laporan
+  const reportPhotosHTML = t.photos && t.photos.length > 0 ? `
+    <div style="margin-top:12px">
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;font-weight:600;display:flex;align-items:center;gap:5px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Foto Laporan (${t.photos.length})
       </div>
-      <div style="font-size:13px;color:var(--text);line-height:1.6;word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap">${t.desc || '<span style="color:var(--text-3);font-style:italic">Tidak ada deskripsi.</span>'}</div>
-      ${t.photos && t.photos.length > 0 ? `
-      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
-        <div style="font-size:11px;color:var(--text-3);font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:4px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          Foto Laporan (${t.photos.length})
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-          ${t.photos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
-        </div>
-      </div>` : ''}
-    </div>`;
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        ${t.photos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
+      </div>
+    </div>` : '';
+
   const followUpPhotosHTML = t.followUpPhotos && t.followUpPhotos.length > 0 ? `
-    <div style="margin-top:8px">
-      <div style="font-size:12px;color:var(--success);font-weight:600;margin-bottom:6px">📷 Foto Tindak Lanjut</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-        ${t.followUpPhotos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
+    <div style="margin-top:12px">
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;font-weight:600;display:flex;align-items:center;gap:5px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Foto Tindak Lanjut (${t.followUpPhotos.length})
       </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        ${t.followUpPhotos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
+      </div>
+    </div>` : '';
+
+  const reportHistoryBlock = `
+    <div style="background:var(--primary-pale);border:2px solid var(--primary);border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--primary);font-weight:700;margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;gap:5px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+        Riwayat Laporan
+      </div>
+      <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Dilaporkan: ${date}</div>
+      <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Topik</div>
+        <div style="font-weight:600;font-size:14px;word-break:break-word;overflow-wrap:anywhere">${t.topic}</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Deskripsi</div>
+        <div style="line-height:1.6;font-size:13px;word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap">${t.desc || '(Tidak ada deskripsi)'}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:#fff;border-radius:8px;padding:10px;min-width:0">
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:3px">Pelapor</div>
+          <div style="font-weight:600;font-size:13px;word-break:break-word;overflow-wrap:anywhere">${t.reporter || '-'}</div>
+          <div style="font-size:11px;color:var(--text-2);word-break:break-all">${t.wa || '-'}</div>
+        </div>
+        <div style="background:#fff;border-radius:8px;padding:10px;min-width:0">
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:3px">Sekolah</div>
+          <div style="font-weight:600;font-size:13px;word-break:break-word;overflow-wrap:anywhere">${t.schoolName}</div>
+          <div style="font-size:11px;color:var(--text-2)">NPSN: ${t.schoolId}</div>
+        </div>
+      </div>
+      ${reportPhotosHTML}
+    </div>`;
+
+  const processHistoryBlock = (t.status === 'Dalam Proses' || t.status === 'Selesai') ? `
+    <div style="background:#fff3e0;border:2px solid #ffb74d;border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;color:#ff8c00;font-weight:700;margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;gap:5px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff8c00" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 0l4.24-4.24M1 12h6m6 0h6m-17.78 7.78l4.24-4.24m5.08 0l4.24 4.24"/></svg>
+        Riwayat Proses
+      </div>
+      <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Status Diubah: ${processDate || '—'}</div>
+      <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Catatan Tindak Lanjut</div>
+        <div style="line-height:1.6;font-size:13px;color:var(--text);word-break:break-word;overflow-wrap:anywhere">${t.notes || '(Belum ada catatan)'}</div>
+      </div>
+      ${t.status === 'Dalam Proses' ? followUpPhotosHTML : ''}
+    </div>` : '';
+
+  const completeHistoryBlock = t.status === 'Selesai' ? `
+    <div style="background:var(--success-pale);border:2px solid var(--success);border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--success);font-weight:700;margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;gap:5px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Riwayat Penyelesaian
+      </div>
+      <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Selesai: ${completeDate || '—'}</div>
+      <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #a9dfbf;font-size:13px;color:var(--success);font-weight:600">
+        Laporan ini telah selesai ditangani oleh pihak sekolah.
+      </div>
+      ${followUpPhotosHTML}
     </div>` : '';
 
   // Timeline blok waktu — hanya tampil jika status sudah melewati "Baru"
@@ -1995,23 +2132,12 @@ async function trackReport() {
             ${s.done && s.sub ? `<span style="font-size:9px;color:${s.done ? 'var(--primary)' : 'var(--text-3)'};opacity:0.75;text-align:center;line-height:1.3;margin-top:1px">${s.sub}</span>` : ''}
           </div>`).join('')}
       </div>
-      <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
-        <div style="font-size:11px;color:var(--text-3);margin-bottom:2px">Topik</div>
-        <div style="font-weight:600;font-size:14px;word-break:break-word;overflow-wrap:anywhere">${t.topic}</div>
-        <div style="font-size:12px;color:var(--text-3);margin-top:4px">Dilaporkan: ${date}</div>
-        ${t.incidentDate ? `<div style="font-size:12px;color:var(--danger);margin-top:4px;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Tanggal kejadian: <strong>${new Date(t.incidentDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</strong></div>` : ''}
-      </div>
-      <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
-        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px">Sekolah</div>
-        <div style="font-weight:600;font-size:14px;word-break:break-word;overflow-wrap:anywhere">${t.schoolName}</div>
-      </div>
+      ${t.incidentDate ? `<div style="background:#fff7f4;border:1px solid #f5c2b7;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:var(--danger);display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Tanggal kejadian: <strong>${new Date(t.incidentDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</strong></div>` : ''}
       ${timelineHTML}
-      ${descAndPhotosHTML}
-      ${t.notes ? `<div style="background:var(--success-pale);border-radius:8px;padding:12px;border:1px solid #a9dfbf">
-        <div style="font-size:11px;color:var(--success);font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px">${SVGIcons.clipboard} Tindak Lanjut Sekolah</div>
-        <div style="font-size:13px;color:var(--text);word-break:break-word;overflow-wrap:anywhere">${t.notes}</div>
-        ${followUpPhotosHTML}
-      </div>` : '<div style="background:var(--warning-pale);border-radius:8px;padding:12px;border:1px solid #f9e79f;font-size:13px;color:var(--warning)">Laporan Anda sedang menunggu tindak lanjut dari pihak sekolah.</div>'}
+      ${reportHistoryBlock}
+      ${processHistoryBlock}
+      ${completeHistoryBlock}
+      ${t.status === 'Baru' ? '<div style="background:var(--warning-pale);border-radius:8px;padding:12px;border:1px solid #f9e79f;font-size:13px;color:var(--warning)">Laporan Anda sedang menunggu tindak lanjut dari pihak sekolah.</div>' : ''}
     </div>`;
 }
 
