@@ -85,17 +85,25 @@ function upsertTicketToCache(ticketLite) {
 }
 
 function runTicketRenderHooks() {
-  if (window.currentUser) {
-    if (window.currentUser.type === 'school') {
-      window.renderSchoolTickets && window.renderSchoolTickets();
-      window.updateSchoolStats && window.updateSchoolStats();
-    } else if (window.currentUser.type === 'admin') {
-      window.updateAdminStats && window.updateAdminStats();
-      window.renderAdminRecent && window.renderAdminRecent();
-      window.renderAdminTickets && window.renderAdminTickets();
-      window.renderSchoolTable && window.renderSchoolTable();
-      window.renderUserTable && window.renderUserTable();
-    }
+  const session = getSessionUser();
+  if (session?.type === 'school') {
+    window.renderSchoolTickets && window.renderSchoolTickets();
+    window.updateSchoolStats && window.updateSchoolStats();
+  } else if (session?.type === 'admin') {
+    window.updateAdminStats && window.updateAdminStats();
+    window.renderAdminRecent && window.renderAdminRecent();
+    window.renderAdminTickets && window.renderAdminTickets();
+    window.renderSchoolTable && window.renderSchoolTable();
+    window.renderUserTable && window.renderUserTable();
+  }
+}
+
+function getSessionUser() {
+  try {
+    const raw = sessionStorage.getItem('SiLaPorUser');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
   }
 }
 
@@ -245,6 +253,31 @@ window.fbStartRealtimeForContext = function ({ context = 'public', schoolId = nu
 
 window.fbStopRealtime = stopRealtimeListeners;
 
+let _lastSessionSignature = '';
+async function syncContextFromSession(force = false) {
+  const session = getSessionUser();
+  const signature = session ? `${session.type}:${session.schoolId || session.username || ''}` : 'public';
+  if (!force && signature === _lastSessionSignature) return;
+  _lastSessionSignature = signature;
+
+  if (!session) {
+    window.fbStartRealtimeForContext({ context: 'public' });
+    return;
+  }
+
+  if (session.type === 'school' && session.schoolId) {
+    await window.fbLoadTicketsPage({ context: 'school', schoolId: session.schoolId, reset: true });
+    window.fbStartRealtimeForContext({ context: 'school', schoolId: session.schoolId });
+    return;
+  }
+
+  if (session.type === 'admin') {
+    await window.fbLoadTicketsPage({ context: 'admin', reset: true });
+    window.fbStartRealtimeForContext({ context: 'admin' });
+    return;
+  }
+}
+
 // ============================================================
 // INISIALISASI DATA AWAL (TANPA MENARIK SEMUA TIKET)
 // ============================================================
@@ -322,5 +355,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if (window.restoreLoginState) {
       window.restoreLoginState();
     }
+    syncContextFromSession(true);
+    setInterval(() => {
+      syncContextFromSession(false);
+    }, 1200);
   });
 });
