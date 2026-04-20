@@ -77,6 +77,26 @@ function defaultAdmin() {
   return { username: 'admin', passwordHash: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918' };
 }
 
+function normalizeSchoolId(value) {
+  return String(value ?? '').trim();
+}
+
+function getTicketSchoolId(ticket) {
+  if (!ticket) return '';
+  return normalizeSchoolId(ticket.schoolId || ticket.schoolID || ticket.npsn || ticket.schoolNpsn);
+}
+
+function buildSchoolIdCandidates(schoolId) {
+  const normalized = normalizeSchoolId(schoolId);
+  if (!normalized) return [];
+  const candidates = [normalized];
+  const numeric = Number(normalized);
+  if (!Number.isNaN(numeric) && Number.isFinite(numeric)) {
+    candidates.push(numeric);
+  }
+  return candidates;
+}
+
 function upsertTicketToCache(ticketLite) {
   if (!window.DB || !window.DB.tickets) return;
   const idx = window.DB.tickets.findIndex(t => t.id === ticketLite.id);
@@ -118,6 +138,67 @@ function buildTicketsQuery({ context, schoolId, lastVisible = null, pageSize = T
   return q;
 }
 
+function isTicketForSchool(ticket, schoolId) {
+  return getTicketSchoolId(ticket) === normalizeSchoolId(schoolId);
+}
+
+async function fetchSchoolTicketsByCandidates({ schoolId, pageSize = TICKET_PAGE_SIZE }) {
+  const candidates = buildSchoolIdCandidates(schoolId);
+  if (candidates.length === 0) return [];
+
+  const baseRef = collection(db, 'tickets');
+  const rows = [];
+  const seenIds = new Set();
+
+  for (const candidate of candidates) {
+    const q = query(baseRef, where('schoolId', '==', candidate), orderBy('date', 'desc'), limit(pageSize));
+    const snap = await getDocs(q);
+    snap.docs.forEach(d => {
+      const row = stripPhotos(d.data());
+      if (seenIds.has(row.id)) return;
+      seenIds.add(row.id);
+      rows.push(row);
+    });
+  }
+
+  rows.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return rows;
+}
+
+async function scanSchoolTickets({ schoolId, pageSize = TICKET_PAGE_SIZE, maxScanned = 500 }) {
+  const normalizedSchoolId = normalizeSchoolId(schoolId);
+  if (!normalizedSchoolId) return [];
+
+  const baseRef = collection(db, 'tickets');
+  const matched = [];
+  const seen = new Set();
+  let lastVisible = null;
+  let scanned = 0;
+  let hasMore = true;
+
+  while (hasMore && scanned < maxScanned) {
+    const q = lastVisible
+      ? query(baseRef, orderBy('date', 'desc'), startAfter(lastVisible), limit(pageSize))
+      : query(baseRef, orderBy('date', 'desc'), limit(pageSize));
+    const snap = await getDocs(q);
+    if (snap.empty) break;
+
+    snap.docs.forEach(d => {
+      const row = stripPhotos(d.data());
+      if (!row.id || seen.has(row.id)) return;
+      seen.add(row.id);
+      if (isTicketForSchool(row, normalizedSchoolId)) matched.push(row);
+    });
+
+    scanned += snap.docs.length;
+    lastVisible = snap.docs[snap.docs.length - 1];
+    hasMore = snap.docs.length === pageSize;
+  }
+
+  matched.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return matched;
+}
+
 let _schoolsUnsub = null;
 let _ticketsUnsub = null;
 
@@ -154,15 +235,23 @@ window.fbLoadTicketsPage = async function ({ context = 'admin', schoolId = null,
   meta.isLoading = true;
 
   try {
-    const q = buildTicketsQuery({
-      context,
-      schoolId,
-      lastVisible: meta.lastVisible,
-      pageSize: meta.pageSize
-    });
-
-    const snap = await getDocs(q);
-    const rows = snap.empty ? [] : snap.docs.map(d => stripPhotos(d.data()));
+    let snap = null;
+    let rows = [];
+    if (context === 'school' && !meta.lastVisible) {
+      rows = await scanSchoolTickets({ schoolId, pageSize: meta.pageSize, maxScanned: 500 });
+      if (rows.length === 0) {
+        rows = await fetchSchoolTicketsByCandidates({ schoolId, pageSize: meta.pageSize });
+      }
+    } else {
+      const q = buildTicketsQuery({
+        context,
+        schoolId,
+        lastVisible: meta.lastVisible,
+        pageSize: meta.pageSize
+      });
+      snap = await getDocs(q);
+      rows = snap.empty ? [] : snap.docs.map(d => stripPhotos(d.data()));
+    }
 
     if (!meta.lastVisible) {
       window.DB.tickets = rows;
@@ -172,8 +261,8 @@ window.fbLoadTicketsPage = async function ({ context = 'admin', schoolId = null,
       window.DB.tickets = [...window.DB.tickets, ...merged];
     }
 
-    meta.lastVisible = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : meta.lastVisible;
-    meta.hasMore = snap.docs.length === meta.pageSize;
+    meta.lastVisible = snap && snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : meta.lastVisible;
+    meta.hasMore = !!snap && snap.docs.length === meta.pageSize;
     runTicketRenderHooks();
   } catch (e) {
     console.error('fbLoadTicketsPage error:', e);
@@ -192,7 +281,9 @@ window.fbStartRealtimeForContext = function ({ context = 'public', schoolId = nu
 
   if (context === 'public') return;
 
-  const q = buildTicketsQuery({ context, schoolId, pageSize: TICKET_PAGE_SIZE });
+  const q = context === 'school'
+    ? buildTicketsQuery({ context: 'admin', pageSize: TICKET_PAGE_SIZE })
+    : buildTicketsQuery({ context, schoolId, pageSize: TICKET_PAGE_SIZE });
   _ticketsUnsub = onSnapshot(q, (snap) => {
     if (!window.DB) return;
 
@@ -201,6 +292,7 @@ window.fbStartRealtimeForContext = function ({ context = 'public', schoolId = nu
       if (change.type === 'removed') {
         window.DB.tickets = window.DB.tickets.filter(t => t.id !== ticketLite.id);
       } else {
+        if (context === 'school' && !isTicketForSchool(ticketLite, schoolId)) return;
         upsertTicketToCache(ticketLite);
       }
     });
@@ -210,6 +302,24 @@ window.fbStartRealtimeForContext = function ({ context = 'public', schoolId = nu
 };
 
 window.fbStopRealtime = stopRealtimeListeners;
+
+window.fbRefreshSchoolTickets = async function (schoolId) {
+  if (!window.DB) return;
+  let rows = await scanSchoolTickets({ schoolId, pageSize: 50, maxScanned: 1000 });
+  if (rows.length === 0) {
+    rows = await fetchSchoolTicketsByCandidates({ schoolId, pageSize: 100 });
+  }
+  const normalizedSchoolId = normalizeSchoolId(schoolId);
+  window.DB.tickets = rows.filter(t => getTicketSchoolId(t) === normalizedSchoolId);
+
+  if (window.DBMeta && window.DBMeta.tickets) {
+    window.DBMeta.tickets.context = 'school';
+    window.DBMeta.tickets.schoolId = normalizedSchoolId;
+    window.DBMeta.tickets.lastVisible = null;
+    window.DBMeta.tickets.hasMore = false;
+  }
+  runTicketRenderHooks();
+};
 
 // ============================================================
 // INISIALISASI DATA AWAL (TANPA MENARIK SEMUA TIKET)
