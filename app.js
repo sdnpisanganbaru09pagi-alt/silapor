@@ -643,6 +643,22 @@ function filterWAInput(input) {
   }
 }
 
+// ====================== TOPIC CHANGE HANDLER ======================
+function onTopicChange(select) {
+  const isBully = select.value === 'Perilaku Tidak Pantas / Bullying';
+  const group = document.getElementById('incidentDateGroup');
+  const dateInput = document.getElementById('r_incident_date');
+  if (group) {
+    group.style.display = isBully ? '' : 'none';
+  }
+  if (dateInput) {
+    // Set max date to today so future dates can't be picked
+    dateInput.max = new Date().toISOString().split('T')[0];
+    if (!isBully) dateInput.value = '';
+    showFieldHint('r_incident_date_hint', '', false);
+  }
+}
+
 // ====================== SUBMIT REPORT ======================
 function submitReport() {
   const name = document.getElementById('r_name').value.trim();
@@ -651,6 +667,9 @@ function submitReport() {
   const schoolName = document.getElementById('r_school_name').value;
   const topic = document.getElementById('r_topic').value;
   const desc = document.getElementById('r_desc').value.trim();
+
+  const isBully = topic === 'Perilaku Tidak Pantas / Bullying';
+  const incidentDate = isBully ? (document.getElementById('r_incident_date').value || '') : '';
 
   if (!name) return showAlert('reporterAlert', 'danger', 'Nama pelapor wajib diisi.');
   if (name.length < 3) return showAlert('reporterAlert', 'danger', 'Nama pelapor minimal 3 karakter.');
@@ -663,6 +682,7 @@ function submitReport() {
   if (waDigits.length > WA_MAX) return showAlert('reporterAlert', 'danger', `Nomor WhatsApp maksimal ${WA_MAX} digit.`);
   if (!schoolId) return showAlert('reporterAlert', 'danger', 'Pilih sekolah dari dropdown.');
   if (!topic) return showAlert('reporterAlert', 'danger', 'Pilih topik permasalahan.');
+  if (isBully && !incidentDate) return showAlert('reporterAlert', 'danger', 'Tanggal kejadian wajib diisi untuk laporan bullying.');
   if (desc.length < 20) return showAlert('reporterAlert', 'danger', 'Deskripsi permasalahan minimal 20 karakter.');
   if (!captchaVerified) return showAlert('reporterAlert', 'danger', 'Harap jawab pertanyaan verifikasi matematika dengan benar.');
 
@@ -680,7 +700,8 @@ function submitReport() {
     const ticket = {
       id, reporter: name, email: document.getElementById('r_email').value.trim(),
       wa, schoolId, schoolName, topic, desc, photos, status: 'Baru',
-      date: new Date().toISOString(), notes: '', followUpPhotos: [], processDate: null, completeDate: null
+      date: new Date().toISOString(), incidentDate: incidentDate || null,
+      notes: '', followUpPhotos: [], processDate: null, completeDate: null
     };
     const DB = loadDB();
     DB.tickets.push(ticket);
@@ -695,6 +716,8 @@ function submitReport() {
     document.getElementById('r_school_name').value = '';
     document.getElementById('r_topic').value = '';
     document.getElementById('r_desc').value = '';
+    document.getElementById('r_incident_date').value = '';
+    document.getElementById('incidentDateGroup').style.display = 'none';
     document.getElementById('photoPreview').innerHTML = '';
     photoFiles = [];
     genCaptcha();
@@ -1235,7 +1258,7 @@ function ticketCard(t, isSchool) {
       ${t.wa ? `<span>${SVGIcons.phone} ${t.wa}</span>` : ''}
       ${!isSchool ? `<span>${SVGIcons.building} ${t.schoolName}</span>` : ''}
     </div>
-    ${t.notes ? `<div style="margin-top:8px;font-size:12px;background:var(--success-pale);padding:6px 10px;border-radius:6px;color:var(--success);display:flex;align-items:center;gap:6px">${SVGIcons.clipboard} ${t.notes}</div>` : ''}
+    ${t.notes ? `<div style="margin-top:8px;font-size:12px;background:var(--success-pale);padding:6px 10px;border-radius:6px;color:var(--success);display:flex;align-items:center;gap:6px;word-break:break-word;overflow-wrap:anywhere">${SVGIcons.clipboard} ${t.notes}</div>` : ''}
     <div style="margin-top:12px;display:flex;gap:8px">
       <button class="btn btn-sm btn-outline" onclick="openTicket('${t.id}',${isSchool})">Lihat Detail</button>
       <button class="btn btn-sm btn-outline" onclick="printSingleTicketPDF('${t.id}')" style="gap:6px">
@@ -1300,22 +1323,22 @@ function openTicket(id, isSchool) {
         <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Dilaporkan: ${date}</div>
         <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
           <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Topik</div>
-          <div style="font-weight:600;font-size:14px">${t.topic}</div>
+          <div style="font-weight:600;font-size:14px;word-break:break-word;overflow-wrap:anywhere">${t.topic}</div>
         </div>
         <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
           <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Deskripsi</div>
-          <div style="line-height:1.6;font-size:13px">${t.desc}</div>
+          <div style="line-height:1.6;font-size:13px;word-break:break-word;overflow-wrap:anywhere">${t.desc}</div>
         </div>
         ${photosHTML}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div style="background:#fff;border-radius:8px;padding:10px">
+          <div style="background:#fff;border-radius:8px;padding:10px;min-width:0">
             <div style="font-size:11px;color:var(--text-3);margin-bottom:3px">Pelapor</div>
-            <div style="font-weight:600;font-size:13px">${t.reporter}</div>
-            <div style="font-size:11px;color:var(--text-2)">${t.wa}</div>
+            <div style="font-weight:600;font-size:13px;word-break:break-word;overflow-wrap:anywhere">${t.reporter}</div>
+            <div style="font-size:11px;color:var(--text-2);word-break:break-all">${t.wa}</div>
           </div>
-          <div style="background:#fff;border-radius:8px;padding:10px">
+          <div style="background:#fff;border-radius:8px;padding:10px;min-width:0">
             <div style="font-size:11px;color:var(--text-3);margin-bottom:3px">Sekolah</div>
-            <div style="font-weight:600;font-size:13px">${t.schoolName}</div>
+            <div style="font-weight:600;font-size:13px;word-break:break-word;overflow-wrap:anywhere">${t.schoolName}</div>
             <div style="font-size:11px;color:var(--text-2)">NPSN: ${t.schoolId}</div>
           </div>
         </div>
@@ -1328,7 +1351,7 @@ function openTicket(id, isSchool) {
         <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Status Diubah: ${processDate}</div>
         <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
           <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Catatan Tindak Lanjut</div>
-          <div style="line-height:1.6;font-size:13px;color:var(--text)">${t.notes || '(Belum ada catatan)'}</div>
+          <div style="line-height:1.6;font-size:13px;color:var(--text);word-break:break-word;overflow-wrap:anywhere">${t.notes || '(Belum ada catatan)'}</div>
         </div>
         ${processPhotosHTML && t.status === 'Dalam Proses' ? processPhotosHTML : ''}
       </div>
@@ -1860,22 +1883,40 @@ async function trackReport() {
   }
   if (!t) { el.innerHTML = `<div class="alert alert-danger"><div class="alert-icon">${SVGIcons.x}</div><div>Nomor tiket <strong>${id}</strong> tidak ditemukan.</div></div>`; return; }
 
-  const date = new Date(t.date).toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const fmtDateTime = iso => iso ? new Date(iso).toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null;
+  const date        = fmtDateTime(t.date);
+  const processDate  = fmtDateTime(t.processDate);
+  const completeDate = fmtDateTime(t.completeDate);
+
   const statusClass = t.status === 'Baru' ? 'badge-new' : t.status === 'Dalam Proses' ? 'badge-process' : 'badge-done';
-  const statusIcon = t.status === 'Baru' ? '<span style="font-size:11px;font-weight:bold;color:var(--primary)">NEW</span>' : t.status === 'Dalam Proses' ? SVGIcons.gear : SVGIcons.check;
+  const statusIcon  = t.status === 'Baru' ? '<span style="font-size:11px;font-weight:bold;color:var(--primary)">NEW</span>' : t.status === 'Dalam Proses' ? SVGIcons.gear : SVGIcons.check;
+
+  // Steps dengan sub-label waktu
   const steps = [
-    { label: 'Laporan Dikirim', done: true },
-    { label: 'Diterima Sekolah', done: t.status !== 'Baru' },
-    { label: 'Dalam Proses', done: t.status === 'Dalam Proses' || t.status === 'Selesai' },
-    { label: 'Selesai', done: t.status === 'Selesai' }
+    { label: 'Laporan Dikirim',  sub: date,         done: true },
+    { label: 'Diterima Sekolah', sub: processDate,  done: t.status !== 'Baru' },
+    { label: 'Dalam Proses',     sub: processDate,  done: t.status === 'Dalam Proses' || t.status === 'Selesai' },
+    { label: 'Selesai',          sub: completeDate, done: t.status === 'Selesai' }
   ];
-  const photosHTML = t.photos && t.photos.length > 0 ? `
-    <div style="margin-bottom:12px">
-      <div style="font-size:12px;color:var(--text-3);font-weight:600;margin-bottom:6px">📷 Foto Laporan</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-        ${t.photos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
+
+  const descAndPhotosHTML = `
+    <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--text-3);font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:5px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Deskripsi Laporan
       </div>
-    </div>` : '';
+      <div style="font-size:13px;color:var(--text);line-height:1.6;word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap">${t.desc || '<span style="color:var(--text-3);font-style:italic">Tidak ada deskripsi.</span>'}</div>
+      ${t.photos && t.photos.length > 0 ? `
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--text-3);font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:4px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Foto Laporan (${t.photos.length})
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          ${t.photos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
+        </div>
+      </div>` : ''}
+    </div>`;
   const followUpPhotosHTML = t.followUpPhotos && t.followUpPhotos.length > 0 ? `
     <div style="margin-top:8px">
       <div style="font-size:12px;color:var(--success);font-weight:600;margin-bottom:6px">📷 Foto Tindak Lanjut</div>
@@ -1883,6 +1924,60 @@ async function trackReport() {
         ${t.followUpPhotos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
       </div>
     </div>` : '';
+
+  // Timeline blok waktu — hanya tampil jika status sudah melewati "Baru"
+  const timelineHTML = (t.status === 'Dalam Proses' || t.status === 'Selesai') ? `
+    <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
+      <div style="font-size:11px;color:var(--text-3);font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:5px">
+        ${SVGIcons.clock} Riwayat Waktu Penanganan
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0">
+
+        <!-- Laporan Dikirim -->
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="display:flex;flex-direction:column;align-items:center;width:20px;flex-shrink:0">
+            <div style="width:16px;height:16px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+            <div style="width:2px;flex:1;background:var(--border);min-height:20px;margin-top:2px"></div>
+          </div>
+          <div style="padding-bottom:14px;min-width:0">
+            <div style="font-size:12px;font-weight:600;color:var(--primary)">Laporan Dikirim</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:2px">${date}</div>
+          </div>
+        </div>
+
+        <!-- Dalam Proses -->
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="display:flex;flex-direction:column;align-items:center;width:20px;flex-shrink:0">
+            <div style="width:16px;height:16px;border-radius:50%;background:#f39c12;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M4.22 4.22l2.83 2.83m9.9 9.9l2.83 2.83M1 12h4m14 0h4M4.22 19.78l2.83-2.83m9.9-9.9l2.83-2.83"/></svg>
+            </div>
+            ${t.status === 'Selesai' ? `<div style="width:2px;flex:1;background:var(--border);min-height:20px;margin-top:2px"></div>` : ''}
+          </div>
+          <div style="padding-bottom:${t.status === 'Selesai' ? '14' : '0'}px;min-width:0">
+            <div style="font-size:12px;font-weight:600;color:#f39c12">Dalam Proses</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:2px">${processDate || '—'}</div>
+          </div>
+        </div>
+
+        ${t.status === 'Selesai' ? `
+        <!-- Selesai -->
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="display:flex;flex-direction:column;align-items:center;width:20px;flex-shrink:0">
+            <div style="width:16px;height:16px;border-radius:50%;background:var(--success);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+          <div style="min-width:0">
+            <div style="font-size:12px;font-weight:600;color:var(--success)">Selesai</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:2px">${completeDate || '—'}</div>
+          </div>
+        </div>` : ''}
+
+      </div>
+    </div>` : '';
+
   el.innerHTML = `
     <div style="background:var(--primary-pale);border:1px solid #aed6f1;border-radius:12px;padding:16px;margin-top:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -1893,21 +1988,28 @@ async function trackReport() {
         <span class="badge ${statusClass}" style="font-size:13px;padding:6px 14px">${statusIcon} ${t.status}</span>
       </div>
       <div class="steps" style="margin-bottom:12px">
-        ${steps.map(s => `<div class="step ${s.done ? 'done' : ''}"><span class="step-num">${s.done ? '✓' : ''}</span>${s.label}</div>`).join('')}
+        ${steps.map(s => `
+          <div class="step ${s.done ? 'done' : ''}" style="flex-direction:column;align-items:center;gap:2px">
+            <span class="step-num">${s.done ? '✓' : ''}</span>
+            <span>${s.label}</span>
+            ${s.done && s.sub ? `<span style="font-size:9px;color:${s.done ? 'var(--primary)' : 'var(--text-3)'};opacity:0.75;text-align:center;line-height:1.3;margin-top:1px">${s.sub}</span>` : ''}
+          </div>`).join('')}
       </div>
       <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
         <div style="font-size:11px;color:var(--text-3);margin-bottom:2px">Topik</div>
-        <div style="font-weight:600;font-size:14px">${t.topic}</div>
+        <div style="font-weight:600;font-size:14px;word-break:break-word;overflow-wrap:anywhere">${t.topic}</div>
         <div style="font-size:12px;color:var(--text-3);margin-top:4px">Dilaporkan: ${date}</div>
+        ${t.incidentDate ? `<div style="font-size:12px;color:var(--danger);margin-top:4px;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Tanggal kejadian: <strong>${new Date(t.incidentDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</strong></div>` : ''}
       </div>
       <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
         <div style="font-size:11px;color:var(--text-3);margin-bottom:4px">Sekolah</div>
-        <div style="font-weight:600;font-size:14px">${t.schoolName}</div>
+        <div style="font-weight:600;font-size:14px;word-break:break-word;overflow-wrap:anywhere">${t.schoolName}</div>
       </div>
-      ${photosHTML}
+      ${timelineHTML}
+      ${descAndPhotosHTML}
       ${t.notes ? `<div style="background:var(--success-pale);border-radius:8px;padding:12px;border:1px solid #a9dfbf">
         <div style="font-size:11px;color:var(--success);font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px">${SVGIcons.clipboard} Tindak Lanjut Sekolah</div>
-        <div style="font-size:13px;color:var(--text)">${t.notes}</div>
+        <div style="font-size:13px;color:var(--text);word-break:break-word;overflow-wrap:anywhere">${t.notes}</div>
         ${followUpPhotosHTML}
       </div>` : '<div style="background:var(--warning-pale);border-radius:8px;padding:12px;border:1px solid #f9e79f;font-size:13px;color:var(--warning)">Laporan Anda sedang menunggu tindak lanjut dari pihak sekolah.</div>'}
     </div>`;

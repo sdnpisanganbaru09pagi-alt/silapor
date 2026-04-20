@@ -195,7 +195,7 @@
 
     <div class="form-group">
       <label>Topik Permasalahan <span>*</span></label>
-      <select id="r_topic">
+      <select id="r_topic" onchange="onTopicChange(this)">
         <option value="">-- Pilih Topik --</option>
         <option>Kebersihan Lingkungan</option>
         <option>Kerusakan Fasilitas / Infrastruktur</option>
@@ -204,9 +204,19 @@
         <option>Taman & Ruang Hijau</option>
         <option>Pencahayaan & Listrik</option>
         <option>Drainase & Banjir</option>
-        <option>Perilaku Tidak Pantas</option>
+        <option>Perilaku Tidak Pantas / Bullying</option>
         <option>Lainnya</option>
       </select>
+    </div>
+
+    <!-- Date picker — hanya muncul untuk topik Perilaku Tidak Pantas / Bullying -->
+    <div class="form-group" id="incidentDateGroup" style="display:none">
+      <label>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:4px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Tanggal Kejadian <span>*</span>
+      </label>
+      <input type="date" id="r_incident_date" max="" style="font-size:15px">
+      <div class="field-hint" id="r_incident_date_hint" style="display:none"></div>
     </div>
 
     <div class="form-group">

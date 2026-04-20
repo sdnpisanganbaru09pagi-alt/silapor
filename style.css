@@ -779,6 +779,15 @@ tr:hover td { background: #fafbfe }
   max-width: 500px;
   max-height: 85vh;
   overflow-y: auto;
+  /* Cegah teks panjang tanpa spasi meluber keluar modal */
+  overflow-x: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Pastikan semua child di flex/grid tidak meluber */
+.modal * {
+  min-width: 0;
 }
 
 .modal-header {
@@ -786,6 +795,8 @@ tr:hover td { background: #fafbfe }
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .modal-title {
@@ -795,6 +806,10 @@ tr:hover td { background: #fafbfe }
   display: flex;
   align-items: center;
   gap: 6px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  flex: 1;
 }
 
 .modal-close {
@@ -807,6 +822,7 @@ tr:hover td { background: #fafbfe }
   padding: 2px 6px;
   border-radius: 4px;
   transition: background .15s;
+  flex-shrink: 0;
 }
 
 .modal-close:hover { background: var(--neutral) }
@@ -896,6 +912,7 @@ tr:hover td { background: #fafbfe }
   color: var(--text-3);
   font-family: 'Sora', sans-serif;
   margin-bottom: 2px;
+  word-break: break-all;
 }
 
 .ticket-title {
@@ -913,6 +930,15 @@ tr:hover td { background: #fafbfe }
   gap: 12px;
   flex-wrap: wrap;
   margin-top: 4px;
+}
+
+.ticket-meta span {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .ticket-body {
