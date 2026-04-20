@@ -47,7 +47,9 @@ body {
   line-height: 1.6;
   color: var(--text);
   background:
-    linear-gradient(135deg, #25bfc2 0%, #20aac6 32%, #1f8fca 62%, #2468ba 100%);
+    radial-gradient(1100px 600px at -10% -20%, rgba(46, 134, 193, 0.24) 0%, rgba(46, 134, 193, 0) 60%),
+    radial-gradient(900px 520px at 110% 0%, rgba(26, 82, 118, 0.2) 0%, rgba(26, 82, 118, 0) 62%),
+    linear-gradient(180deg, #eaf4ff 0%, #f4f8fd 52%, #f8fbff 100%);
   min-height: 100vh;
 }
 
@@ -340,19 +342,12 @@ body {
   inset: 0;
   pointer-events: none;
   z-index: -1;
-  opacity: .7;
+  opacity: .72;
   background:
-    repeating-linear-gradient(
-      135deg,
-      rgba(255,255,255,0.12) 0 120px,
-      rgba(255,255,255,0.02) 120px 250px
-    ),
-    repeating-linear-gradient(
-      135deg,
-      rgba(8,70,139,0.24) 0 70px,
-      rgba(8,70,139,0) 70px 200px
-    ),
-    linear-gradient(135deg, rgba(43,204,191,0.2) 0%, rgba(38,150,208,0.18) 50%, rgba(28,95,184,0.24) 100%);
+    radial-gradient(circle at 12% 18%, rgba(127, 185, 231, 0.32) 0 20%, transparent 22%),
+    radial-gradient(circle at 88% 30%, rgba(46, 134, 193, 0.2) 0 17%, transparent 20%),
+    radial-gradient(circle at 20% 88%, rgba(26, 82, 118, 0.14) 0 14%, transparent 18%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.2) 0 12px, rgba(255,255,255,0) 12px 24px);
 }
 
 /* ---- Pages ---- */
