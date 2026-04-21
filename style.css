@@ -46,8 +46,34 @@ body {
   font-size: 15px;
   line-height: 1.6;
   color: var(--text);
-  background: var(--white);
+  background-color: #1a1a1a;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)),
+    url('bg.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  filter: none;
   min-height: 100vh;
+}
+
+/* Grayscale effect on bg via pseudo overlay trick — applied via bg image filter */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url('bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: grayscale(100%) brightness(0.35);
+  z-index: -1;
+}
+
+body {
+  background-image: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55));
+  background-color: transparent;
 }
 
 /* ============================================================
@@ -329,6 +355,7 @@ body {
   align-items: center;
   overflow-x: hidden;   /* cegah konten child melebar layar */
   min-width: 0;
+  background: transparent;
 }
 
 /* ---- Pages ---- */
@@ -348,8 +375,8 @@ footer {
   width: 100%;
   margin-top: auto;
   padding: 28px 24px 20px;
-  background: #1e2d3d;
-  border-top: 3px solid #2e86c1;
+  background: #1a3a5c;
+  border-top: 3px solid #e67e22;
   text-align: center;
   font-size: 12px;
   color: #a8bdd0;
@@ -422,23 +449,37 @@ footer p {
    ============================================================ */
 
 .hero {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #1f6899 50%, var(--primary-light) 100%);
   border-radius: 16px;
   padding: 32px;
   color: #fff;
   margin-bottom: 24px;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 24px rgba(26,82,118,0.28), 0 1px 4px rgba(0,0,0,0.12);
+}
+
+/* Decorative orbs */
+.hero::before {
+  content: '';
+  position: absolute;
+  right: -60px;
+  top: -60px;
+  width: 220px;
+  height: 220px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .hero::after {
   content: '';
   position: absolute;
-  right: -40px;
-  top: -40px;
-  width: 200px;
-  height: 200px;
-  background: rgba(255,255,255,0.05);
+  left: -30px;
+  bottom: -50px;
+  width: 160px;
+  height: 160px;
+  background: rgba(255,255,255,0.04);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -448,19 +489,97 @@ footer p {
   font-size: 22px;
   font-weight: 600;
   margin-bottom: 6px;
+  letter-spacing: -0.01em;
 }
 
-.hero-sub { opacity: .85; font-size: 14px }
+.hero-sub { opacity: .82; font-size: 14px; line-height: 1.55; }
 
 .hero-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.22);
   border-radius: 20px;
   padding: 4px 12px;
   font-size: 12px;
   margin-top: 12px;
+  backdrop-filter: blur(4px);
+}
+
+/* ---- Hero variasi login (sejajar form, lebih kompak) ---- */
+.hero-login {
+  background: linear-gradient(135deg, var(--primary) 0%, #1f6899 55%, var(--primary-light) 100%);
+  border-radius: 16px 16px 0 0;
+  padding: 28px 28px 24px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.hero-login::before {
+  content: '';
+  position: absolute;
+  right: -50px;
+  top: -50px;
+  width: 180px;
+  height: 180px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hero-login::after {
+  content: '';
+  position: absolute;
+  left: -20px;
+  bottom: -40px;
+  width: 120px;
+  height: 120px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hero-login-icon {
+  width: 44px;
+  height: 44px;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  backdrop-filter: blur(4px);
+}
+
+.hero-login-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hero-login-title {
+  font-family: 'Sora', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+
+.hero-login-sub {
+  opacity: .8;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Tracking page — hero sejajar dengan card */
+.tracking-wrap {
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* ============================================================
@@ -528,7 +647,7 @@ footer p {
 .form-group label span { color: #e74c3c; margin-left: 2px }
 
 input, select, textarea {
-  border: 1px solid var(--border);
+  border: 1.5px solid #c2cfe0;
   border-radius: var(--radius-sm);
   padding: 10px 14px;
   font-size: 14px;
@@ -542,7 +661,7 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--primary-light);
-  box-shadow: 0 0 0 3px rgba(46,134,193,0.12);
+  box-shadow: 0 0 0 3px rgba(46,134,193,0.15);
 }
 
 textarea { resize: vertical; min-height: 100px }
@@ -796,6 +915,32 @@ tr:hover td { background: #fafbfe }
 .login-wrap {
   max-width: 420px;
   width: 100%;
+}
+
+/* Card yang menyatu dengan hero-login */
+.login-wrap .card {
+  border-radius: 0 0 var(--radius) var(--radius);
+  border-top: none;
+  margin-bottom: 0;
+}
+
+/* Wrapper hero+card sebagai satu unit */
+.login-panel {
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 6px 32px rgba(26,82,118,0.22), 0 2px 8px rgba(0,0,0,0.1);
+  margin-bottom: 16px;
+}
+
+.login-panel .hero-login {
+  border-radius: 0;
+}
+
+.login-panel .card {
+  border-radius: 0;
+  border-top: none;
+  margin-bottom: 0;
+  box-shadow: none;
 }
 
 .login-logo {

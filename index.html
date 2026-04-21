@@ -284,48 +284,64 @@
 
 <!-- ==================== PAGE: TRACKING ==================== -->
 <div class="page" id="page-tracking">
-  <div class="hero">
-    <div class="hero-title">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:-2px;margin-right:8px">
-        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-      </svg>
-      Lacak Status Laporan
-    </div>
-    <div class="hero-sub">Masukkan nomor tiket untuk melihat status laporan Anda</div>
-  </div>
-  <div class="card card-narrow">
-    <div class="card-title">Cari Laporan</div>
-    <div class="form-group">
-      <label>Nomor Tiket <span>*</span></label>
-      <div style="display:flex;gap:8px">
-        <input type="text" id="trackInput" placeholder="Contoh: TKT-001" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')trackReport()">
-        <button class="btn btn-primary" onclick="trackReport()">Cari</button>
+  <div class="tracking-wrap">
+    <div class="hero">
+      <div class="hero-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:-2px;margin-right:8px">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        Lacak Status Laporan
       </div>
+      <div class="hero-sub">Masukkan nomor tiket untuk melihat status laporan Anda</div>
     </div>
-    <div id="trackResult"></div>
+    <div class="card">
+      <div class="card-title">Cari Laporan</div>
+      <div class="form-group">
+        <label>Nomor Tiket <span>*</span></label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="trackInput" placeholder="Contoh: TKT-001" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')trackReport()">
+          <button class="btn btn-primary" onclick="trackReport()">Cari</button>
+        </div>
+      </div>
+      <div id="trackResult"></div>
+    </div>
   </div>
 </div>
 
 <!-- ==================== PAGE: LOGIN SEKOLAH ==================== -->
 <div class="page" id="page-school-login">
   <div class="login-wrap">
-    <div class="login-logo">
-      <h2>Portal Sekolah</h2>
-      <p>Masuk menggunakan NPSN dan password sekolah Anda</p>
-    </div>
-    <div class="card">
-      <div id="schoolLoginAlert"></div>
-      <div class="form-group">
-        <label>NPSN (Username)</label>
-        <input type="text" id="sl_npsn" placeholder="Contoh: 20400001">
+    <div class="login-panel">
+      <div class="hero-login">
+        <div class="hero-login-header">
+          <div class="hero-login-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="2">
+              <rect x="2" y="7" width="20" height="14" rx="1"/>
+              <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+              <line x1="12" y1="12" x2="12" y2="12.01"/>
+              <path d="M8 12h8M8 16h8"/>
+            </svg>
+          </div>
+          <div>
+            <div class="hero-login-title">Portal Sekolah</div>
+            <div class="hero-login-sub">Masuk sebagai operator sekolah</div>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="sl_pass" placeholder="Password Anda">
+      <div class="card">
+        <div id="schoolLoginAlert"></div>
+        <div class="form-group">
+          <label>NPSN (Username)</label>
+          <input type="text" id="sl_npsn" placeholder="Contoh: 20400001">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="sl_pass" placeholder="Password Anda">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="schoolLogin()">Masuk</button>
+        <div class="divider"></div>
+        <p class="text-sm text-center">Lupa password? Hubungi administrator sistem</p>
       </div>
-      <button class="btn btn-primary btn-full" onclick="schoolLogin()">Masuk</button>
-      <div class="divider"></div>
-      <p class="text-sm text-center">Lupa password? Hubungi administrator sistem</p>
     </div>
   </div>
 </div>
@@ -388,21 +404,32 @@
 <!-- ==================== PAGE: LOGIN ADMIN ==================== -->
 <div class="page" id="page-admin-login">
   <div class="login-wrap">
-    <div class="login-logo">
-      <h2>Portal Administrator</h2>
-      <p>Masuk sebagai admin sistem SiLaPor</p>
-    </div>
-    <div class="card">
-      <div id="adminLoginAlert"></div>
-      <div class="form-group">
-        <label>Username Admin</label>
-        <input type="text" id="al_user" placeholder="Username admin">
+    <div class="login-panel">
+      <div class="hero-login">
+        <div class="hero-login-header">
+          <div class="hero-login-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="2">
+              <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="hero-login-title">Portal Administrator</div>
+            <div class="hero-login-sub">Masuk sebagai admin sistem SiLaPor</div>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="al_pass" placeholder="Password administrator">
+      <div class="card">
+        <div id="adminLoginAlert"></div>
+        <div class="form-group">
+          <label>Username Admin</label>
+          <input type="text" id="al_user" placeholder="Username admin">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="al_pass" placeholder="Password administrator">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="adminLogin()">Masuk sebagai Admin</button>
       </div>
-      <button class="btn btn-primary btn-full" onclick="adminLogin()">Masuk sebagai Admin</button>
     </div>
   </div>
 </div>
