@@ -72,10 +72,10 @@ let sessionTimeoutId = null;
 // ====================== SECURITY: Login Attempt Limiter ======================
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes
-const LOGIN_ATTEMPTS_KEY = 'SiLaPorLoginAttempts';
+const LOGIN_ATTEMPTS_KEY = 'SiLaporLoginAttempts';
 
 // ====================== SECURITY: Activity Log ======================
-const ACTIVITY_LOG_KEY = 'SiLaPorActivityLog';
+const ACTIVITY_LOG_KEY = 'SiLaporActivityLog';
 const MAX_LOG_ENTRIES = 100;
 
 async function hashPassword(password) {
@@ -119,7 +119,7 @@ async function migrateAdminPasswordHash(admin) {
 
 function saveSessionUser(user) {
   try {
-    sessionStorage.setItem('SiLaPorUser', JSON.stringify(user));
+    sessionStorage.setItem('SiLaporUser', JSON.stringify(user));
     initSessionTimeout();
   } catch (e) {
     console.warn('Cannot save session user', e);
@@ -128,7 +128,7 @@ function saveSessionUser(user) {
 
 function clearSessionUser() {
   try {
-    sessionStorage.removeItem('SiLaPorUser');
+    sessionStorage.removeItem('SiLaporUser');
     clearSessionTimeout();
   } catch (e) {
     console.warn('Cannot clear session user', e);
@@ -137,7 +137,7 @@ function clearSessionUser() {
 
 function loadSessionUser() {
   try {
-    const raw = sessionStorage.getItem('SiLaPorUser');
+    const raw = sessionStorage.getItem('SiLaporUser');
     return raw ? JSON.parse(raw) : null;
   } catch (e) {
     return null;
@@ -1804,7 +1804,7 @@ async function printTicketsPDF() {
 <body>
   <div class="header">
     <div class="header-left">
-      <div class="app-name"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> SiLaPor</div>
+      <div class="app-name"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> SiLapor</div>
       <div class="app-sub">Sistem Laporan Sekolah</div>
     </div>
     <div class="header-right">
@@ -1841,7 +1841,7 @@ async function printTicketsPDF() {
   </table>
 
   <div class="footer">
-    <span>© 2026 SiLaPor — Dikembangkan oleh Penata Kelola Sistem dan Teknologi Informasi, Suku Dinas Pendidikan Jakarta Timur I</span>
+    <span>© 2026 SiLapor — Dikembangkan oleh Penata Kelola Sistem dan Teknologi Informasi, Suku Dinas Pendidikan Jakarta Timur I</span>
     <span>Halaman dicetak otomatis oleh sistem</span>
   </div>
 </body>
@@ -1934,7 +1934,7 @@ async function printSingleTicketPDF(id) {
 <body>
   <div class="header">
     <div class="header-left">
-      <div class="app-name"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> SiLaPor</div>
+      <div class="app-name"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> SiLapor</div>
       <div class="app-sub">Sistem Laporan Sekolah</div>
     </div>
     <div class="header-right">
@@ -1975,7 +1975,7 @@ async function printSingleTicketPDF(id) {
   ${selesaiBlock}
 
   <div class="footer">
-    <span>© 2026 SiLaPor — Penata Kelola Sistem dan Teknologi Informasi, Suku Dinas Pendidikan Jakarta Timur I</span>
+    <span>© 2026 SiLapor — Penata Kelola Sistem dan Teknologi Informasi, Suku Dinas Pendidikan Jakarta Timur I</span>
     <span>ID: ${t.id}</span>
   </div>
 </body>
