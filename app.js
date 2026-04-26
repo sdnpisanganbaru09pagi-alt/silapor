@@ -50,7 +50,10 @@ function isTicketForSchool(ticket, schoolId) {
 function resolveTicketProgressData(ticket) {
   const t = ticket || {};
   const processNotes = t.processNotes || t.notes || '';
-  const completeNotes = t.completeNotes || '';
+  const completeNotes = t.completeNotes
+    || t.resolutionNotes
+    || t.finalNotes
+    || (t.status === 'Selesai' ? (t.notes || t.processNotes || '') : '');
   const hasProcessPhotos = Array.isArray(t.processPhotos) && t.processPhotos.length > 0;
   const hasCompletePhotos = Array.isArray(t.completePhotos) && t.completePhotos.length > 0;
   const hasLegacyFollowUpPhotos = Array.isArray(t.followUpPhotos) && t.followUpPhotos.length > 0;
@@ -1607,7 +1610,9 @@ function updateStatusModal(id, status) {
 
     if (status === 'Selesai') {
       t.completeNotes = notes;
+      t.notes = notes; // backward compatibility
       updatePayload.completeNotes = notes;
+      updatePayload.notes = notes;
 
       if (photoUpdates) {
         t.completePhotos = photoUpdates;
