@@ -2091,12 +2091,12 @@ async function trackReport() {
   const statusClass = t.status === 'Baru' ? 'badge-new' : t.status === 'Dalam Proses' ? 'badge-process' : 'badge-done';
   const statusIcon  = t.status === 'Baru' ? '<span style="font-size:11px;font-weight:bold;color:var(--primary)">NEW</span>' : t.status === 'Dalam Proses' ? SVGIcons.gear : SVGIcons.check;
 
-  // Steps dengan sub-label waktu
+  // Steps status (tanpa sub-label waktu agar tidak duplikatif dengan timeline)
   const steps = [
-    { label: 'Laporan Dikirim',  sub: date,         done: true },
-    { label: 'Diterima Sekolah', sub: processDate,  done: t.status !== 'Baru' },
-    { label: 'Dalam Proses',     sub: processDate,  done: t.status === 'Dalam Proses' || t.status === 'Selesai' },
-    { label: 'Selesai',          sub: completeDate, done: t.status === 'Selesai' }
+    { label: 'Laporan Dikirim',  done: true },
+    { label: 'Diterima Sekolah', done: t.status !== 'Baru' },
+    { label: 'Dalam Proses',     done: t.status === 'Dalam Proses' || t.status === 'Selesai' },
+    { label: 'Selesai',          done: t.status === 'Selesai' }
   ];
 
   const reportPhotosHTML = t.photos && t.photos.length > 0 ? `
@@ -2253,10 +2253,9 @@ async function trackReport() {
       </div>
       <div class="steps" style="margin-bottom:12px">
         ${steps.map(s => `
-          <div class="step ${s.done ? 'done' : ''}" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;padding:10px 8px;min-height:88px">
+          <div class="step ${s.done ? 'done' : ''}" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;padding:10px 8px;min-height:64px">
             <span class="step-num">${s.done ? '✓' : ''}</span>
             <span style="font-size:11px;font-weight:600;line-height:1.25;text-align:center">${s.label}</span>
-            <span style="font-size:10px;color:${s.done ? 'var(--primary)' : 'var(--text-3)'};opacity:0.85;text-align:center;line-height:1.35;min-height:28px;display:flex;align-items:flex-start;justify-content:center">${s.done && s.sub ? s.sub : '&nbsp;'}</span>
           </div>`).join('')}
       </div>
       ${t.incidentDate ? `<div style="background:#fff7f4;border:1px solid #f5c2b7;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:var(--danger);display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Tanggal kejadian: <strong>${new Date(t.incidentDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</strong></div>` : ''}
