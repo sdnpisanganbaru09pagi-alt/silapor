@@ -47,6 +47,25 @@ function isTicketForSchool(ticket, schoolId) {
   return getTicketSchoolId(ticket) === normalizeSchoolId(schoolId);
 }
 
+function resolveTicketProgressData(ticket) {
+  const t = ticket || {};
+  const processNotes = t.processNotes || t.notes || '';
+  const completeNotes = t.completeNotes || '';
+  const hasProcessPhotos = Array.isArray(t.processPhotos) && t.processPhotos.length > 0;
+  const hasCompletePhotos = Array.isArray(t.completePhotos) && t.completePhotos.length > 0;
+  const hasLegacyFollowUpPhotos = Array.isArray(t.followUpPhotos) && t.followUpPhotos.length > 0;
+
+  const processPhotos = hasProcessPhotos
+    ? t.processPhotos
+    : ((!hasCompletePhotos && t.status !== 'Selesai' && hasLegacyFollowUpPhotos) ? t.followUpPhotos : []);
+
+  const completePhotos = hasCompletePhotos
+    ? t.completePhotos
+    : ((t.status === 'Selesai' && hasLegacyFollowUpPhotos) ? t.followUpPhotos : []);
+
+  return { processNotes, completeNotes, processPhotos, completePhotos };
+}
+
 async function saveDB(db) {
   window.DB = db;
 }
@@ -1428,10 +1447,7 @@ function openTicket(id, isSchool) {
         </div>
       </div>` : '';
 
-    const processNotes = t.processNotes || t.notes || '';
-    const completeNotes = t.completeNotes || '';
-    const processPhotos = Array.isArray(t.processPhotos) ? t.processPhotos : (Array.isArray(t.followUpPhotos) ? t.followUpPhotos : []);
-    const completePhotos = Array.isArray(t.completePhotos) ? t.completePhotos : (t.status === 'Selesai' ? (Array.isArray(t.followUpPhotos) ? t.followUpPhotos : []) : []);
+    const { processNotes, completeNotes, processPhotos, completePhotos } = resolveTicketProgressData(t);
 
     const processPhotosHTML = processPhotos.length > 0 ? `
       <div style="margin-top:12px">
@@ -1869,15 +1885,21 @@ async function printSingleTicketPDF(id) {
   const tglLapor = _fmtDate(t.date);
   const tglProses = t.processDate ? _fmtDate(t.processDate) : '-';
   const tglSelesai = t.completeDate ? _fmtDate(t.completeDate) : '-';
+  const { processNotes, completePhotos, processPhotos } = resolveTicketProgressData(t);
 
   const photosHTML = t.photos && t.photos.length > 0
     ? `<div class="section-label" style="display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto Laporan</div>
        <div class="photo-grid">${t.photos.map(p => `<img src="${p}" class="photo">`).join('')}</div>`
     : '';
 
-  const followUpPhotosHTML = t.followUpPhotos && t.followUpPhotos.length > 0
+  const processPhotosHTML = processPhotos && processPhotos.length > 0
     ? `<div class="section-label" style="color:#2e7d32;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto Tindak Lanjut</div>
-       <div class="photo-grid">${t.followUpPhotos.map(p => `<img src="${p}" class="photo">`).join('')}</div>`
+       <div class="photo-grid">${processPhotos.map(p => `<img src="${p}" class="photo">`).join('')}</div>`
+    : '';
+
+  const completePhotosHTML = completePhotos && completePhotos.length > 0
+    ? `<div class="section-label" style="color:#2e7d32;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto Penyelesaian</div>
+       <div class="photo-grid">${completePhotos.map(p => `<img src="${p}" class="photo">`).join('')}</div>`
     : '';
 
   const prosesBlock = (t.status === 'Dalam Proses' || t.status === 'Selesai') ? `
@@ -1885,9 +1907,9 @@ async function printSingleTicketPDF(id) {
       <div class="block-title" style="color:#f57c00;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f57c00" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 0l4.24-4.24M1 12h6m6 0h6m-17.78 7.78l4.24-4.24m5.08 0l4.24 4.24"/></svg> Dalam Proses</div>
       <div class="row-2col">
         <div><div class="lbl">Tanggal Diproses</div><div class="val">${tglProses}</div></div>
-        <div><div class="lbl">Catatan Tindak Lanjut</div><div class="val">${t.notes || '(Belum ada catatan)'}</div></div>
+        <div><div class="lbl">Catatan Tindak Lanjut</div><div class="val">${processNotes || '(Belum ada catatan)'}</div></div>
       </div>
-      ${followUpPhotosHTML}
+      ${processPhotosHTML}
     </div>` : '';
 
   const selesaiBlock = t.status === 'Selesai' ? `
@@ -1895,6 +1917,7 @@ async function printSingleTicketPDF(id) {
       <div class="block-title" style="color:#2e7d32;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Selesai</div>
       <div class="lbl">Tanggal Selesai</div>
       <div class="val">${tglSelesai}</div>
+      ${completePhotosHTML}
     </div>` : '';
 
   const html = `<!DOCTYPE html>
@@ -2063,6 +2086,7 @@ async function trackReport() {
   const date        = fmtDateTime(t.date);
   const processDate  = fmtDateTime(t.processDate);
   const completeDate = fmtDateTime(t.completeDate);
+  const { processNotes, completeNotes, processPhotos, completePhotos } = resolveTicketProgressData(t);
 
   const statusClass = t.status === 'Baru' ? 'badge-new' : t.status === 'Dalam Proses' ? 'badge-process' : 'badge-done';
   const statusIcon  = t.status === 'Baru' ? '<span style="font-size:11px;font-weight:bold;color:var(--primary)">NEW</span>' : t.status === 'Dalam Proses' ? SVGIcons.gear : SVGIcons.check;
@@ -2086,14 +2110,25 @@ async function trackReport() {
       </div>
     </div>` : '';
 
-  const followUpPhotosHTML = t.followUpPhotos && t.followUpPhotos.length > 0 ? `
+  const processPhotosHTML = processPhotos && processPhotos.length > 0 ? `
     <div style="margin-top:12px">
       <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;font-weight:600;display:flex;align-items:center;gap:5px">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Foto Tindak Lanjut (${t.followUpPhotos.length})
+        Foto Tindak Lanjut (${processPhotos.length})
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-        ${t.followUpPhotos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
+        ${processPhotos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
+      </div>
+    </div>` : '';
+
+  const completePhotosHTML = completePhotos && completePhotos.length > 0 ? `
+    <div style="margin-top:12px">
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;font-weight:600;display:flex;align-items:center;gap:5px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Foto Penyelesaian (${completePhotos.length})
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        ${completePhotos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
       </div>
     </div>` : '';
 
@@ -2136,9 +2171,9 @@ async function trackReport() {
       <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Status Diubah: ${processDate || '—'}</div>
       <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
         <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Catatan Tindak Lanjut</div>
-        <div style="line-height:1.6;font-size:13px;color:var(--text);word-break:break-word;overflow-wrap:anywhere">${t.notes || '(Belum ada catatan)'}</div>
+        <div style="line-height:1.6;font-size:13px;color:var(--text);word-break:break-word;overflow-wrap:anywhere">${processNotes || '(Belum ada catatan)'}</div>
       </div>
-      ${t.status === 'Dalam Proses' ? followUpPhotosHTML : ''}
+      ${processPhotosHTML}
     </div>` : '';
 
   const completeHistoryBlock = t.status === 'Selesai' ? `
@@ -2149,9 +2184,9 @@ async function trackReport() {
       </div>
       <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Selesai: ${completeDate || '—'}</div>
       <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #a9dfbf;font-size:13px;color:var(--success);font-weight:600">
-        Laporan ini telah selesai ditangani oleh pihak sekolah.
+        ${completeNotes || 'Laporan ini telah selesai ditangani oleh pihak sekolah.'}
       </div>
-      ${followUpPhotosHTML}
+      ${completePhotosHTML}
     </div>` : '';
 
   // Timeline blok waktu — hanya tampil jika status sudah melewati "Baru"
