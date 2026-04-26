@@ -2141,7 +2141,7 @@ async function trackReport() {
     <div style="background:var(--primary-pale);border:2px solid var(--primary);border-radius:12px;padding:16px;margin-bottom:12px">
       <div style="font-size:12px;color:var(--primary);font-weight:700;margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;gap:5px">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
-        Riwayat Laporan
+        Laporan Awal
       </div>
       <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Dilaporkan: ${date}</div>
       <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
@@ -2171,7 +2171,7 @@ async function trackReport() {
     <div style="background:#fff3e0;border:2px solid #ffb74d;border-radius:12px;padding:16px;margin-bottom:12px">
       <div style="font-size:12px;color:#ff8c00;font-weight:700;margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;gap:5px">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff8c00" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 0l4.24-4.24M1 12h6m6 0h6m-17.78 7.78l4.24-4.24m5.08 0l4.24 4.24"/></svg>
-        Riwayat Proses
+        Dalam Proses
       </div>
       <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Status Diubah: ${processDate || '—'}</div>
       <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px">
@@ -2185,11 +2185,12 @@ async function trackReport() {
     <div style="background:var(--success-pale);border:2px solid var(--success);border-radius:12px;padding:16px;margin-bottom:12px">
       <div style="font-size:12px;color:var(--success);font-weight:700;margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;gap:5px">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        Riwayat Penyelesaian
+        Selesai
       </div>
       <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Selesai: ${completeDate || '—'}</div>
-      <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #a9dfbf;font-size:13px;color:var(--success);font-weight:600">
-        ${completeNotes || 'Laporan ini telah selesai ditangani oleh pihak sekolah.'}
+      <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid #a9dfbf">
+        <div style="font-size:12px;color:var(--success);margin-bottom:4px;font-weight:600">Laporan ini telah selesai ditangani oleh pihak sekolah.</div>
+        <div style="line-height:1.6;font-size:13px;color:var(--text);word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap">${completeNotes || '(Tidak ada catatan penyelesaian.)'}</div>
       </div>
       ${completePhotosHTML}
     </div>` : '';
