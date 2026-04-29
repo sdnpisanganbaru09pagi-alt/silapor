@@ -369,7 +369,11 @@ body {
   overflow-x: hidden;
 }
 
-.page.active { display: block }
+/* Page aktif mengisi sisa ruang → footer selalu terlihat tanpa scroll jika konten pendek */
+.page.active {
+  display: block;
+  flex: 1;
+}
 
 /* ---- Footer ---- */
 footer,
@@ -644,6 +648,7 @@ footer p {
 /* Tracking page — hero sejajar dengan card */
 .tracking-wrap {
   max-width: 560px;
+  width: 100%;
   margin-left: auto;
   margin-right: auto;
 }
@@ -965,22 +970,27 @@ tr:hover td { background: #fafbfe }
    ============================================================ */
 
 #page-school-login,
-#page-admin-login {
+#page-admin-login,
+#page-tracking {
   display: none;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
   flex: 1;
   padding: 24px !important;
 }
 
 #page-school-login.active,
-#page-admin-login.active {
+#page-admin-login.active,
+#page-tracking.active {
   display: flex;
 }
 
 .login-wrap {
   max-width: 420px;
   width: 100%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Card yang menyatu dengan hero-login */
@@ -1464,9 +1474,10 @@ tr:hover td { background: #fafbfe }
 
   .page { padding: 16px 12px }
 
-  /* Login pages */
+  /* Login & tracking pages */
   #page-school-login,
-  #page-admin-login {
+  #page-admin-login,
+  #page-tracking {
     padding: 16px 12px !important;
   }
 
