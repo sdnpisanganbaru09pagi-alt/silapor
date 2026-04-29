@@ -2382,3 +2382,24 @@ genCaptcha();
 document.getElementById('captchaAns').addEventListener('keyup', function(e) {
   if (e.key === 'Enter') checkCaptchaAuto();
 });
+
+// ====================== ENTER KEY SHORTCUTS ======================
+(function attachEnterListeners() {
+  function onEnter(ids, fn) {
+    ids.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); fn(); }
+      });
+    });
+  }
+
+  // Login sekolah: NPSN & password
+  onEnter(['sl_npsn', 'sl_pass'], schoolLogin);
+
+  // Login admin: username & password
+  onEnter(['al_user', 'al_pass'], adminLogin);
+
+  // Lacak tiket
+  onEnter(['trackInput'], trackReport);
+})();
