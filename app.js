@@ -2561,11 +2561,6 @@ async function submitLupaTiket() {
       tickets = await window.fbFindTicketsForRecovery({ schoolId });
     } catch (e) {
       console.error('fbFindTicketsForRecovery error:', e);
-      if (e && (e.code === 'permission-denied' || String(e.message || '').toLowerCase().includes('permission'))) {
-        showLupaTiketAlert('warning', 'Pencarian langsung ke database ditolak aturan keamanan (Firestore Rules). Hasil bisa tidak lengkap. Hubungi admin sistem.');
-      } else if (e && (e.code === 'failed-precondition' || String(e.message || '').toLowerCase().includes('index'))) {
-        showLupaTiketAlert('warning', 'Konfigurasi query database belum siap (index). Hasil fallback bisa tidak lengkap. Hubungi admin sistem.');
-      }
     }
   }
 
