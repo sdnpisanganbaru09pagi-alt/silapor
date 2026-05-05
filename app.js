@@ -2556,6 +2556,13 @@ async function submitLupaTiket() {
   // Cari tiket yang cocok
   const DB = loadDB();
   let tickets = DB.tickets || [];
+  if (window.fbFindTicketsForRecovery) {
+    try {
+      tickets = await window.fbFindTicketsForRecovery({ schoolId });
+    } catch (e) {
+      console.error('fbFindTicketsForRecovery error:', e);
+    }
+  }
 
   // Normalisasi nomor WA: strip +62 / 62 / 0 di awal, bandingkan digit inti
   function normalizeWA(num) {
