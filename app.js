@@ -2572,10 +2572,11 @@ async function submitLupaTiket() {
     return s;
   }
   const waNorm = normalizeWA(wa);
+  const targetSchoolId = normalizeSchoolId(schoolId);
 
   const found = tickets.filter(t => {
-    const ticketSchoolId = String(t.schoolId || t.schoolID || t.npsn || t.schoolNpsn || '').trim();
-    if (ticketSchoolId !== schoolId) return false;
+    const ticketSchoolId = normalizeSchoolId(t.schoolId || t.schoolID || t.npsn || t.schoolNpsn);
+    if (ticketSchoolId !== targetSchoolId) return false;
 
     const ticketWA = normalizeWA(t.wa || t.phone || t.whatsapp || '');
     const waMatch = ticketWA && waNorm && (ticketWA === waNorm || ticketWA.endsWith(waNorm) || waNorm.endsWith(ticketWA));
