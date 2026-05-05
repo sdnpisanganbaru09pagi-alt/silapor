@@ -2556,6 +2556,18 @@ async function submitLupaTiket() {
   // Cari tiket yang cocok
   const DB = loadDB();
   let tickets = DB.tickets || [];
+  if (window.fbFindTicketsForRecovery) {
+    try {
+      tickets = await window.fbFindTicketsForRecovery({ schoolId });
+    } catch (e) {
+      console.error('fbFindTicketsForRecovery error:', e);
+      if (e && (e.code === 'permission-denied' || String(e.message || '').toLowerCase().includes('permission'))) {
+        showLupaTiketAlert('warning', 'Pencarian langsung ke database ditolak aturan keamanan (Firestore Rules). Hasil bisa tidak lengkap. Hubungi admin sistem.');
+      } else if (e && (e.code === 'failed-precondition' || String(e.message || '').toLowerCase().includes('index'))) {
+        showLupaTiketAlert('warning', 'Konfigurasi query database belum siap (index). Hasil fallback bisa tidak lengkap. Hubungi admin sistem.');
+      }
+    }
+  }
 
   // Normalisasi nomor WA: strip +62 / 62 / 0 di awal, bandingkan digit inti
   function normalizeWA(num) {
@@ -2565,10 +2577,11 @@ async function submitLupaTiket() {
     return s;
   }
   const waNorm = normalizeWA(wa);
+  const targetSchoolId = normalizeSchoolId(schoolId);
 
   const found = tickets.filter(t => {
-    const ticketSchoolId = String(t.schoolId || t.schoolID || t.npsn || t.schoolNpsn || '').trim();
-    if (ticketSchoolId !== schoolId) return false;
+    const ticketSchoolId = normalizeSchoolId(t.schoolId || t.schoolID || t.npsn || t.schoolNpsn);
+    if (ticketSchoolId !== targetSchoolId) return false;
 
     const ticketWA = normalizeWA(t.wa || t.phone || t.whatsapp || '');
     const waMatch = ticketWA && waNorm && (ticketWA === waNorm || ticketWA.endsWith(waNorm) || waNorm.endsWith(ticketWA));
