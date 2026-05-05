@@ -22,7 +22,7 @@ import {
 (function loadXLSX() {
   if (typeof XLSX === 'undefined') {
     const script = document.createElement('script');
-    script.src = '/js/xlsx.full.min.js';
+    script.src = '/silapor/js/xlsx.full.min.js';
     script.onload = () => console.log('[OK] XLSX library loaded');
     script.onerror = () => console.error('[ERROR] XLSX tidak ditemukan. Pastikan file ada di /js/xlsx.full.min.js');
     document.head.appendChild(script);
