@@ -307,6 +307,14 @@
         </div>
       </div>
       <div id="trackResult"></div>
+      <div style="margin-top:12px;text-align:center">
+        <button class="btn btn-sm btn-outline" onclick="openLupaTiket()" style="gap:6px;font-size:13px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Lupa nomor tiket?
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -878,6 +886,89 @@
   <div class="lightbox-wrap">
     <button class="lightbox-close" onclick="closePhotoLightbox()">✕</button>
     <img id="photoLightboxImg" src="" alt="Foto" class="lightbox-img">
+  </div>
+</div>
+
+<!-- Modal: Lupa Nomor Tiket -->
+<div class="modal-overlay" id="lupaTiketModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-2px;margin-right:6px">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Lupa Nomor Tiket
+      </div>
+      <button class="modal-close" onclick="closeLupaTiket()">✕</button>
+    </div>
+
+    <!-- Step 1: Form verifikasi -->
+    <div id="lupaTiketStep1">
+      <p class="text-sm" style="color:var(--text-2);margin-bottom:16px">
+        Masukkan nomor HP dan pilih sekolah yang Anda gunakan saat membuat laporan. Kami akan menampilkan nomor tiket Anda.
+      </p>
+      <div id="lupaTiketAlert"></div>
+
+      <div class="form-group">
+        <label>Nomor WhatsApp <span>*</span></label>
+        <input type="tel" id="lt_wa" placeholder="08xxxxxxxxxx" maxlength="15" inputmode="numeric"
+          oninput="filterLupaTiketWA(this)">
+      </div>
+
+      <div class="form-group">
+        <label>Email <span style="font-weight:400;color:var(--text-3)">(opsional, jika diisi saat lapor)</span></label>
+        <input type="email" id="lt_email" placeholder="email@contoh.com">
+      </div>
+
+      <div class="form-group">
+        <label>Nama Sekolah <span>*</span></label>
+        <div class="search-select">
+          <input type="text" id="lt_schoolSearch" placeholder="Ketik nama sekolah..."
+            oninput="filterLupaTiketSchools()" onfocus="showLupaTiketDropdown()" autocomplete="off">
+          <div class="dropdown-list" id="lt_schoolDropdown"></div>
+        </div>
+        <input type="hidden" id="lt_school_id">
+        <input type="hidden" id="lt_school_name">
+      </div>
+
+      <!-- CAPTCHA -->
+      <div class="captcha-box" style="margin-bottom:16px">
+        <div style="width:100%">
+          <p class="text-sm" style="font-weight:600;color:var(--text-2)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              style="display:inline;vertical-align:-2px;margin-right:4px">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Verifikasi Anti-Bot — Hitung hasil berikut:
+          </p>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+            <div class="captcha-math" id="lt_captchaQ"></div>
+            <span class="text-sm">=</span>
+            <input type="number" class="captcha-input" id="lt_captchaAns" placeholder="?" oninput="checkLupaTiketCaptcha()">
+          </div>
+          <div id="lt_captchaStatus" style="font-size:12px;margin-top:6px;height:18px;font-weight:500"></div>
+          <p class="text-sm" style="margin-top:4px;opacity:0.7">Jawaban akan diverifikasi secara otomatis</p>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="submitLupaTiket()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        Cari Nomor Tiket Saya
+      </button>
+    </div>
+
+    <!-- Step 2: Hasil tiket -->
+    <div id="lupaTiketStep2" style="display:none">
+      <div id="lupaTiketResults"></div>
+      <button class="btn btn-outline btn-full" style="margin-top:12px" onclick="resetLupaTiket()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.13-3.36L23 10M1 14l5.36 4.36A9 9 0 0020.49 15"/>
+        </svg>
+        Cari Lagi
+      </button>
+    </div>
   </div>
 </div>
 

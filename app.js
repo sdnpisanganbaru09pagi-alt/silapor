@@ -2403,3 +2403,225 @@ document.getElementById('captchaAns').addEventListener('keyup', function(e) {
   // Lacak tiket
   onEnter(['trackInput'], trackReport);
 })();
+
+// ====================== LUPA NOMOR TIKET ======================
+let ltCaptchaA = 0, ltCaptchaB = 0, ltCaptchaVerified = false;
+
+function openLupaTiket() {
+  resetLupaTiket();
+  genLupaTiketCaptcha();
+  populateLupaTiketSchools();
+  document.getElementById('lupaTiketModal').classList.add('show');
+}
+
+function closeLupaTiket() {
+  document.getElementById('lupaTiketModal').classList.remove('show');
+}
+
+function resetLupaTiket() {
+  ltCaptchaVerified = false;
+  document.getElementById('lt_wa').value = '';
+  document.getElementById('lt_email').value = '';
+  document.getElementById('lt_schoolSearch').value = '';
+  document.getElementById('lt_school_id').value = '';
+  document.getElementById('lt_school_name').value = '';
+  document.getElementById('lt_schoolDropdown').classList.remove('show');
+  document.getElementById('lt_captchaAns').value = '';
+  document.getElementById('lt_captchaStatus').textContent = '';
+  document.getElementById('lt_captchaAns').style.borderColor = 'var(--border)';
+  document.getElementById('lupaTiketAlert').innerHTML = '';
+  document.getElementById('lupaTiketStep1').style.display = '';
+  document.getElementById('lupaTiketStep2').style.display = 'none';
+  document.getElementById('lupaTiketResults').innerHTML = '';
+  genLupaTiketCaptcha();
+}
+
+function genLupaTiketCaptcha() {
+  ltCaptchaA = Math.floor(Math.random() * 10) + 1;
+  ltCaptchaB = Math.floor(Math.random() * 10) + 1;
+  const q = document.getElementById('lt_captchaQ');
+  if (q) q.textContent = ltCaptchaA + ' + ' + ltCaptchaB;
+  const ans = document.getElementById('lt_captchaAns');
+  if (ans) { ans.value = ''; ans.style.borderColor = 'var(--border)'; }
+  ltCaptchaVerified = false;
+  const s = document.getElementById('lt_captchaStatus');
+  if (s) s.textContent = '';
+}
+
+function checkLupaTiketCaptcha() {
+  const ans = parseInt(document.getElementById('lt_captchaAns').value);
+  const statusEl = document.getElementById('lt_captchaStatus');
+  const ansEl = document.getElementById('lt_captchaAns');
+  if (ans === ltCaptchaA + ltCaptchaB) {
+    ltCaptchaVerified = true;
+    statusEl.innerHTML = SVGIcons.check + ' Verifikasi berhasil!';
+    statusEl.style.color = 'var(--success)';
+    ansEl.style.borderColor = 'var(--success)';
+  } else if (document.getElementById('lt_captchaAns').value.length > 0) {
+    ltCaptchaVerified = false;
+    statusEl.innerHTML = SVGIcons.x + ' Jawaban salah';
+    statusEl.style.color = 'var(--danger)';
+    ansEl.style.borderColor = 'var(--danger)';
+  } else {
+    ltCaptchaVerified = false;
+    statusEl.textContent = '';
+    ansEl.style.borderColor = 'var(--border)';
+  }
+}
+
+function filterLupaTiketWA(el) {
+  el.value = el.value.replace(/[^0-9]/g, '');
+}
+
+function populateLupaTiketSchools() {
+  filterLupaTiketSchools();
+}
+
+function filterLupaTiketSchools() {
+  const q = (document.getElementById('lt_schoolSearch').value || '').toLowerCase();
+  const dd = document.getElementById('lt_schoolDropdown');
+  const DB = loadDB();
+  const matches = q.length === 0
+    ? DB.schools.slice(0, 50)
+    : DB.schools.filter(s => s.name.toLowerCase().includes(q) || s.id.includes(q)).slice(0, 50);
+
+  dd.innerHTML = '';
+  if (matches.length === 0) {
+    dd.innerHTML = '<div class="dropdown-item" style="color:var(--text-3)">Sekolah tidak ditemukan</div>';
+  } else {
+    matches.forEach(s => {
+      const d = document.createElement('div');
+      d.className = 'dropdown-item';
+      d.innerHTML = `<strong>${s.name}</strong> <span style="color:var(--text-3);font-size:11px">${s.level} · ${s.city}</span>`;
+      d.onclick = () => {
+        document.getElementById('lt_schoolSearch').value = s.name;
+        document.getElementById('lt_school_id').value = s.id;
+        document.getElementById('lt_school_name').value = s.name;
+        dd.classList.remove('show');
+      };
+      dd.appendChild(d);
+    });
+  }
+  dd.classList.add('show');
+}
+
+function showLupaTiketDropdown() {
+  filterLupaTiketSchools();
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#lupaTiketModal .search-select')) {
+    const dd = document.getElementById('lt_schoolDropdown');
+    if (dd) dd.classList.remove('show');
+  }
+});
+
+function showLupaTiketAlert(type, msg) {
+  const el = document.getElementById('lupaTiketAlert');
+  el.innerHTML = `<div class="alert alert-${type}" style="margin-bottom:12px">
+    <div class="alert-icon">${type === 'danger' ? SVGIcons.x : SVGIcons.info}</div>
+    <div>${msg}</div>
+  </div>`;
+}
+
+async function submitLupaTiket() {
+  const alertEl = document.getElementById('lupaTiketAlert');
+  alertEl.innerHTML = '';
+
+  const wa = document.getElementById('lt_wa').value.trim();
+  const email = document.getElementById('lt_email').value.trim().toLowerCase();
+  const schoolId = document.getElementById('lt_school_id').value.trim();
+  const schoolName = document.getElementById('lt_school_name').value.trim();
+
+  // Validasi
+  if (!wa || wa.length < 9) {
+    showLupaTiketAlert('danger', 'Nomor WhatsApp tidak valid. Minimal 9 digit.');
+    return;
+  }
+  if (!schoolId || !schoolName) {
+    showLupaTiketAlert('danger', 'Pilih nama sekolah dari daftar.');
+    return;
+  }
+  if (!ltCaptchaVerified) {
+    showLupaTiketAlert('danger', 'Selesaikan verifikasi anti-bot terlebih dahulu.');
+    return;
+  }
+
+  // Cari tiket yang cocok
+  const DB = loadDB();
+  let tickets = DB.tickets || [];
+
+  // Normalisasi nomor WA: strip leading 0, bandingkan 8+ digit terakhir
+  function normalizeWA(num) {
+    return String(num || '').replace(/\D/g, '').replace(/^0+/, '');
+  }
+  const waNorm = normalizeWA(wa);
+
+  const found = tickets.filter(t => {
+    const ticketSchoolId = String(t.schoolId || t.schoolID || t.npsn || t.schoolNpsn || '').trim();
+    if (ticketSchoolId !== schoolId) return false;
+
+    const ticketWA = normalizeWA(t.wa || t.phone || t.whatsapp || '');
+    const waMatch = ticketWA && waNorm && (ticketWA === waNorm || ticketWA.endsWith(waNorm) || waNorm.endsWith(ticketWA));
+
+    if (!waMatch) {
+      // Coba cocokkan via email jika diisi
+      if (email && t.email && t.email.toLowerCase() === email) return true;
+      return false;
+    }
+    return true;
+  });
+
+  // Tampilkan hasil
+  document.getElementById('lupaTiketStep1').style.display = 'none';
+  document.getElementById('lupaTiketStep2').style.display = '';
+
+  const resultsEl = document.getElementById('lupaTiketResults');
+
+  if (found.length === 0) {
+    resultsEl.innerHTML = `
+      <div class="alert alert-warning">
+        <div class="alert-icon">${SVGIcons.info}</div>
+        <div>
+          <strong>Tiket tidak ditemukan</strong><br>
+          Tidak ada laporan yang cocok dengan nomor HP dan sekolah yang Anda masukkan. Pastikan nomor HP dan nama sekolah sesuai dengan yang digunakan saat melapor.
+        </div>
+      </div>`;
+    return;
+  }
+
+  const statusBadge = (s) => {
+    const styles = { 'Baru': 'background:var(--warning-pale);color:var(--warning)', 'Dalam Proses': 'background:var(--primary-pale);color:var(--primary-light)', 'Selesai': 'background:var(--success-pale);color:var(--success)' };
+    const style = styles[s] || styles['Baru'];
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;${style}">${s || 'Baru'}</span>`;
+  };
+
+  const rows = found.map(t => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-family:monospace;font-size:15px;font-weight:700;color:var(--primary);letter-spacing:0.5px">${t.id}</div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:2px">${t.topic || ''} · ${t.date ? new Date(t.date).toLocaleDateString('id-ID') : ''}</div>
+        <div style="margin-top:4px">${statusBadge(t.status)}</div>
+      </div>
+      <button class="btn btn-sm btn-outline" onclick="closeLupaTiketAndTrack('${t.id}')" style="flex-shrink:0">
+        ${SVGIcons.search} Lacak
+      </button>
+    </div>`).join('');
+
+  resultsEl.innerHTML = `
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        <span style="font-weight:600;color:var(--success)">Ditemukan ${found.length} laporan</span>
+      </div>
+      <div style="font-size:12px;color:var(--text-3)">Laporan atas nama: <strong>${found[0].name || '-'}</strong> · Sekolah: <strong>${schoolName}</strong></div>
+    </div>
+    <div>${rows}</div>`;
+}
+
+function closeLupaTiketAndTrack(ticketId) {
+  closeLupaTiket();
+  document.getElementById('trackInput').value = ticketId;
+  showPage('tracking');
+  setTimeout(() => trackReport(), 100);
+}
