@@ -331,7 +331,7 @@ window.fbFindTicketsForRecovery = async function ({ schoolId } = {}) {
   const seenIds = new Set();
 
   for (const candidate of candidates) {
-    const q = query(baseRef, where('schoolId', '==', candidate));
+    const q = query(baseRef, where('schoolId', '==', candidate), orderBy('date', 'desc'));
     const snap = await getDocs(q);
     snap.docs.forEach(d => {
       const row = d.data();
