@@ -322,6 +322,24 @@ window.fbGetTicketFull = async function (id) {
   return null;
 };
 
+window.fbFindTicketsForRecovery = async function ({ schoolId } = {}) {
+  const candidates = buildSchoolIdCandidates(schoolId);
+  if (candidates.length === 0) return [];
+
+  const candidateSet = new Set(candidates.map(c => normalizeSchoolId(c)));
+  const rows = [];
+  const snap = await getDocs(collection(db, 'tickets'));
+  snap.docs.forEach(d => {
+    const row = d.data();
+    if (!row || !row.id) return;
+    const rowSchoolId = normalizeSchoolId(row.schoolId || row.schoolID || row.npsn || row.schoolNpsn);
+    if (candidateSet.has(rowSchoolId)) rows.push(row);
+  });
+
+  rows.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return rows;
+};
+
 // ============================================================
 // SIMPAN / UPDATE DATA KE FIRESTORE
 // ============================================================
