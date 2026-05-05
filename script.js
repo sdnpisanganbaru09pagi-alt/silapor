@@ -22,9 +22,9 @@ import {
 (function loadXLSX() {
   if (typeof XLSX === 'undefined') {
     const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.15.6/xlsx.full.min.js';
-    script.onload = () => console.log('[OK] XLSX library loaded from CDN');
-    script.onerror = () => console.error('[ERROR] Failed to load XLSX library from CDN');
+    script.src = '/js/xlsx.full.min.js';
+    script.onload = () => console.log('[OK] XLSX library loaded');
+    script.onerror = () => console.error('[ERROR] XLSX tidak ditemukan. Pastikan file ada di /js/xlsx.full.min.js');
     document.head.appendChild(script);
   }
 })();
@@ -322,29 +322,6 @@ window.fbGetTicketFull = async function (id) {
   return null;
 };
 
-window.fbFindTicketsForRecovery = async function ({ schoolId } = {}) {
-  const candidates = buildSchoolIdCandidates(schoolId);
-  if (candidates.length === 0) return [];
-
-  const baseRef = collection(db, 'tickets');
-  const rows = [];
-  const seenIds = new Set();
-
-  for (const candidate of candidates) {
-    const q = query(baseRef, where('schoolId', '==', candidate), orderBy('date', 'desc'));
-    const snap = await getDocs(q);
-    snap.docs.forEach(d => {
-      const row = d.data();
-      if (!row || !row.id || seenIds.has(row.id)) return;
-      seenIds.add(row.id);
-      rows.push(row);
-    });
-  }
-
-  rows.sort((a, b) => new Date(b.date) - new Date(a.date));
-  return rows;
-};
-
 // ============================================================
 // SIMPAN / UPDATE DATA KE FIRESTORE
 // ============================================================
@@ -366,6 +343,70 @@ window.fbSaveAdmin = async function (adminObj) {
 
 window.fbUpdateSchool = async function (id, fields) {
   await updateDoc(doc(db, 'schools', id), fields);
+};
+
+// ============================================================
+// CARI TIKET BERDASARKAN NOMOR WA + SCHOOL ID (untuk fitur Lupa Tiket)
+// Strategi: query by schoolId saja (single-field, no composite index),
+// lalu filter WA di client-side. Aman karena rules sudah allow read: if true.
+// ============================================================
+window.fbFindTicketsByWA = async function ({ schoolId, normalizedPhone, email = '' } = {}) {
+  if (!schoolId) return [];
+
+  try {
+    const baseRef = collection(db, 'tickets');
+
+    // Query hanya by schoolId + order by date — index ini sudah ada secara default
+    // karena fbLoadTicketsPage sudah pakai kombinasi ini sebelumnya.
+    const q = query(
+      baseRef,
+      where('schoolId', '==', schoolId),
+      orderBy('date', 'desc'),
+      limit(200) // ambil maks 200 tiket sekolah, cukup untuk di-filter client-side
+    );
+
+    const snap = await getDocs(q);
+    if (snap.empty) return [];
+
+    // Normalisasi WA: strip semua non-digit, strip kode negara 62, strip leading 0
+    function normalizeWA(num) {
+      let s = String(num || '').replace(/\D/g, '');
+      if (s.startsWith('62')) s = s.slice(2);
+      s = s.replace(/^0+/, '');
+      return s;
+    }
+
+    const results = [];
+    snap.docs.forEach(d => {
+      const t = d.data();
+
+      // Filter WA: cocokkan dengan logika fuzzy (endsWith) untuk toleransi format
+      const ticketWA = normalizeWA(t.wa || t.phone || t.whatsapp || '');
+      const waMatch = ticketWA && normalizedPhone
+        && (ticketWA === normalizedPhone
+          || ticketWA.endsWith(normalizedPhone)
+          || normalizedPhone.endsWith(ticketWA));
+
+      // Fallback ke email jika WA tidak cocok tapi email diisi
+      const emailMatch = email && t.email
+        && t.email.toLowerCase() === email.toLowerCase();
+
+      if (waMatch || emailMatch) {
+        // Strip foto sebelum masuk cache (hemat bandwidth, konsisten dgn stripPhotos)
+        const { photos, followUpPhotos, processPhotos, completePhotos, ...rest } = t;
+        results.push({
+          ...rest,
+          hasPhotos: (photos && photos.length > 0) || false,
+          hasFollowUpPhotos: (followUpPhotos && followUpPhotos.length > 0) || false
+        });
+      }
+    });
+
+    return results;
+  } catch (e) {
+    console.error('fbFindTicketsByWA error:', e);
+    return [];
+  }
 };
 
 // ============================================================

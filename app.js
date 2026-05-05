@@ -2553,17 +2553,6 @@ async function submitLupaTiket() {
     return;
   }
 
-  // Cari tiket yang cocok
-  const DB = loadDB();
-  let tickets = DB.tickets || [];
-  if (window.fbFindTicketsForRecovery) {
-    try {
-      tickets = await window.fbFindTicketsForRecovery({ schoolId });
-    } catch (e) {
-      console.error('fbFindTicketsForRecovery error:', e);
-    }
-  }
-
   // Normalisasi nomor WA: strip +62 / 62 / 0 di awal, bandingkan digit inti
   function normalizeWA(num) {
     let s = String(num || '').replace(/\D/g, ''); // hapus semua non-digit
@@ -2572,11 +2561,42 @@ async function submitLupaTiket() {
     return s;
   }
   const waNorm = normalizeWA(wa);
-  const targetSchoolId = normalizeSchoolId(schoolId);
 
+  // Tampilkan loading sementara fetch berjalan
+  showLupaTiketAlert('info', 'Sedang mencari tiket, mohon tunggu...');
+
+  // Kumpulkan tiket: gabungkan cache lokal + hasil fetch langsung dari Firestore
+  // Fetch langsung diperlukan karena cache (window.DB.tickets) kosong saat mode publik
+  const DB = loadDB();
+  let tickets = [...(DB.tickets || [])];
+
+  if (window.fbFindTicketsByWA) {
+    try {
+      const freshTickets = await window.fbFindTicketsByWA({
+        schoolId,
+        normalizedPhone: waNorm,
+        email
+      });
+      // Merge ke tickets lokal, hindari duplikat
+      const existingIds = new Set(tickets.map(t => t.id));
+      freshTickets.forEach(t => {
+        if (!existingIds.has(t.id)) {
+          tickets.push(t);
+          existingIds.add(t.id);
+        }
+      });
+    } catch (e) {
+      console.error('submitLupaTiket: gagal fetch dari Firestore, fallback ke cache', e);
+    }
+  }
+
+  // Bersihkan pesan loading
+  document.getElementById('lupaTiketAlert').innerHTML = '';
+
+  // Filter dari gabungan cache + hasil fetch
   const found = tickets.filter(t => {
-    const ticketSchoolId = normalizeSchoolId(t.schoolId || t.schoolID || t.npsn || t.schoolNpsn);
-    if (ticketSchoolId !== targetSchoolId) return false;
+    const ticketSchoolId = String(t.schoolId || t.schoolID || t.npsn || t.schoolNpsn || '').trim();
+    if (ticketSchoolId !== schoolId) return false;
 
     const ticketWA = normalizeWA(t.wa || t.phone || t.whatsapp || '');
     const waMatch = ticketWA && waNorm && (ticketWA === waNorm || ticketWA.endsWith(waNorm) || waNorm.endsWith(ticketWA));
