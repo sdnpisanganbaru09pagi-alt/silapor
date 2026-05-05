@@ -2470,7 +2470,13 @@ function checkLupaTiketCaptcha() {
 }
 
 function filterLupaTiketWA(el) {
-  el.value = el.value.replace(/[^0-9]/g, '');
+  let val = el.value;
+  // Izinkan '+' hanya di posisi pertama (untuk format +62)
+  if (val.startsWith('+')) {
+    el.value = '+' + val.slice(1).replace(/[^0-9]/g, '');
+  } else {
+    el.value = val.replace(/[^0-9]/g, '');
+  }
 }
 
 function populateLupaTiketSchools() {
@@ -2551,9 +2557,12 @@ async function submitLupaTiket() {
   const DB = loadDB();
   let tickets = DB.tickets || [];
 
-  // Normalisasi nomor WA: strip leading 0, bandingkan 8+ digit terakhir
+  // Normalisasi nomor WA: strip +62 / 62 / 0 di awal, bandingkan digit inti
   function normalizeWA(num) {
-    return String(num || '').replace(/\D/g, '').replace(/^0+/, '');
+    let s = String(num || '').replace(/\D/g, ''); // hapus semua non-digit
+    if (s.startsWith('62')) s = s.slice(2);       // strip kode negara Indonesia
+    s = s.replace(/^0+/, '');                     // strip leading 0
+    return s;
   }
   const waNorm = normalizeWA(wa);
 
@@ -2614,7 +2623,7 @@ async function submitLupaTiket() {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
         <span style="font-weight:600;color:var(--success)">Ditemukan ${found.length} laporan</span>
       </div>
-      <div style="font-size:12px;color:var(--text-3)">Laporan atas nama: <strong>${found[0].name || '-'}</strong> · Sekolah: <strong>${schoolName}</strong></div>
+      <div style="font-size:12px;color:var(--text-3)">Nomor HP: <strong>${wa}</strong> · Sekolah: <strong>${schoolName}</strong></div>
     </div>
     <div>${rows}</div>`;
 }
