@@ -125,6 +125,7 @@ let photoFiles = [];
 let followUpPhotoFiles = [];
 let activeRatingTicketId = '';
 let selectedRatingValue = 0;
+let ratingConfirmArmed = false;
 
 // ====================== SECURITY: Session Timeout ======================
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
@@ -2126,6 +2127,7 @@ function openRatingModal(ticketId) {
   selectedRatingValue = 0;
   document.getElementById('ratingComment').value = '';
   document.getElementById('ratingSubmitBtn').disabled = true;
+  document.getElementById('ratingSubmitBtn').textContent = 'Kirim Rating';
   document.querySelectorAll('.rating-star-btn').forEach(btn => btn.classList.remove('active'));
   openModal('ratingModal');
 }
@@ -2137,15 +2139,16 @@ function selectRating(value) {
     btn.classList.toggle('active', v <= value);
   });
   document.getElementById('ratingSubmitBtn').disabled = value < 1;
+  ratingConfirmArmed = false;
+  document.getElementById('ratingSubmitBtn').textContent = 'Kirim Rating';
 }
 
 async function submitTicketRating() {
   if (!activeRatingTicketId || selectedRatingValue < 1) return;
   const comment = (document.getElementById('ratingComment').value || '').trim().slice(0, 500);
-  const confirmText = comment
-    ? `Kirim rating ${selectedRatingValue}/5 dengan komentar ini?`
-    : `Kirim rating ${selectedRatingValue}/5 sekarang?`;
-  const ok = await showRatingConfirmModal(confirmText);
+  const commentPreview = comment ? `
+Komentar: "${comment}"` : '';
+  const ok = window.confirm(`Kirim rating ${selectedRatingValue}/5 sekarang?${commentPreview}`);
   if (!ok) return;
 
   const payload = {
@@ -2163,6 +2166,7 @@ async function submitTicketRating() {
     el.insertAdjacentHTML('afterbegin', `<div class="alert alert-success"><div class="alert-icon">${SVGIcons.check}</div><div>Terima kasih! Rating Anda berhasil dikirim.</div></div>`);
   }
   activeRatingTicketId = '';
+  ratingConfirmArmed = false;
   await trackReport();
 }
 
