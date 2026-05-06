@@ -1612,7 +1612,7 @@ function updateStatus(id, status) {
   updateSchoolStats();
 }
 
-function updateStatusModal(id, status) {
+async function updateStatusModal(id, status) {
   const notes = document.getElementById('ticketNotes')?.value.trim() || '';
   if (!notes) return alert('Harap isi catatan tindak lanjut sebelum menyimpan.');
   const photoUpdates = followUpPhotoFiles.length ? followUpPhotoFiles : null;
@@ -1633,8 +1633,7 @@ function updateStatusModal(id, status) {
   const ok = await showCustomConfirm(confirmMsg, 'Konfirmasi Perubahan Status');
   if (!ok) return;
   
-  (async () => {
-    t.status = status;
+  t.status = status;
 
     const updatePayload = { status };
 
@@ -1688,8 +1687,7 @@ function updateStatusModal(id, status) {
     closeModal('ticketModal');
     renderSchoolTickets();
     updateSchoolStats();
-    alert('Laporan berhasil diperbarui!');
-  })();
+  alert('Laporan berhasil diperbarui!');
 }
 
 // ====================== CHANGE PASSWORD ======================
