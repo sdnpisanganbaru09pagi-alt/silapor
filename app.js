@@ -22,6 +22,40 @@ const SVGIcons = {
 // Database wrapper
 if (!window.DB) window.DB = { schools: [], tickets: [], admin: { username: 'admin', passwordHash: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918' } };
 
+function showToast(message, type = 'info', duration = 3200) {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast-item ${type === 'danger' ? 'error' : type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.remove();
+  }, duration);
+}
+
+let _confirmResolver = null;
+function showCustomConfirm(message, title = 'Konfirmasi') {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('customConfirmModal');
+    document.getElementById('customConfirmTitle').textContent = title;
+    document.getElementById('customConfirmMessage').textContent = message;
+    _confirmResolver = resolve;
+    modal.classList.add('show');
+  });
+}
+
+window.closeCustomConfirm = function(result) {
+  const modal = document.getElementById('customConfirmModal');
+  if (modal) modal.classList.remove('show');
+  if (_confirmResolver) _confirmResolver(!!result);
+  _confirmResolver = null;
+};
+
+window.alert = function(message) {
+  showToast(String(message), 'info');
+};
+
 function showLoadingOverlay(show) {
   const el = document.getElementById('loadingOverlay');
   if (el) el.classList.toggle('hidden', !show);
@@ -31,6 +65,9 @@ function showDBError() {
   const el = document.getElementById('dbErrorBanner');
   if (el) el.classList.remove('hidden');
 }
+
+window.showLoadingOverlay = showLoadingOverlay;
+window.showDBError = showDBError;
 
 function loadDB() { return window.DB; }
 
@@ -1575,7 +1612,7 @@ function updateStatus(id, status) {
   updateSchoolStats();
 }
 
-function updateStatusModal(id, status) {
+async function updateStatusModal(id, status) {
   const notes = document.getElementById('ticketNotes')?.value.trim() || '';
   if (!notes) return alert('Harap isi catatan tindak lanjut sebelum menyimpan.');
   const photoUpdates = followUpPhotoFiles.length ? followUpPhotoFiles : null;
@@ -1593,10 +1630,10 @@ function updateStatusModal(id, status) {
     ? 'Anda akan mengubah status laporan menjadi "Dalam Proses". Pastikan catatan dan lampiran sudah benar.\n\nLanjutkan?'
     : 'Anda akan menyelesaikan laporan. Status tidak bisa diubah setelah ini.\n\nLanjutkan?';
   
-  if (!confirm(confirmMsg)) return;
+  const ok = await showCustomConfirm(confirmMsg, 'Konfirmasi Perubahan Status');
+  if (!ok) return;
   
-  (async () => {
-    t.status = status;
+  t.status = status;
 
     const updatePayload = { status };
 
@@ -1650,8 +1687,7 @@ function updateStatusModal(id, status) {
     closeModal('ticketModal');
     renderSchoolTickets();
     updateSchoolStats();
-    alert('Laporan berhasil diperbarui!');
-  })();
+  alert('Laporan berhasil diperbarui!');
 }
 
 // ====================== CHANGE PASSWORD ======================

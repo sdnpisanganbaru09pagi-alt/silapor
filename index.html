@@ -1014,6 +1014,22 @@
 
 </div><!-- /app -->
 
+<div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+<div class="modal-overlay" id="customConfirmModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title" id="customConfirmTitle">Konfirmasi</div>
+      <button class="modal-close" onclick="closeCustomConfirm(false)">✕</button>
+    </div>
+    <div id="customConfirmMessage" style="padding:4px 2px 16px;color:var(--text-2)"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeCustomConfirm(false)">Batal</button>
+      <button class="btn btn-primary" onclick="closeCustomConfirm(true)">Lanjutkan</button>
+    </div>
+  </div>
+</div>
+
 <script type="module" src="script.js"></script>
 <script src="app.js" defer></script>
 </body>
