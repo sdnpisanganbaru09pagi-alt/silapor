@@ -1030,7 +1030,22 @@
   </div>
 </div>
 
-<script type="module" src="script.js"></script>
-<script src="app.js" defer></script>
+
+<div class="modal-overlay" id="ratingConfirmModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">Konfirmasi Rating</div>
+      <button class="modal-close" onclick="closeRatingConfirm(false)">✕</button>
+    </div>
+    <div id="ratingConfirmMessage" style="padding:4px 2px 16px;color:var(--text-2)"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeRatingConfirm(false)">Batal</button>
+      <button class="btn btn-primary" onclick="closeRatingConfirm(true)">Kirim</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="script.js?v=20260506-1"></script>
+<script src="app.js?v=20260506-2" defer></script>
 </body>
 </html>
