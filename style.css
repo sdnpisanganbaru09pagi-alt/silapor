@@ -1700,3 +1700,11 @@ tr:hover td { background: #fafbfe }
   line-height: 1.4;
   transition: color 0.2s;
 }
+
+/* Toast */
+.toast-container{position:fixed;top:16px;right:16px;z-index:3000;display:flex;flex-direction:column;gap:10px;max-width:min(92vw,420px)}
+.toast-item{background:#fff;border-left:4px solid var(--primary);box-shadow:var(--shadow);border-radius:10px;padding:10px 12px;color:var(--text-2);font-size:13px;animation:toastIn .2s ease}
+.toast-item.success{border-left-color:var(--success)}
+.toast-item.error{border-left-color:var(--danger)}
+.toast-item.warning{border-left-color:var(--warning)}
+@keyframes toastIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
