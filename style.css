@@ -1121,6 +1121,9 @@ tr:hover td { background: #fafbfe }
 }
 
 .modal-close:hover { background: var(--neutral) }
+.rating-stars-wrap { display:flex; gap:6px; margin:8px 0 4px; }
+.rating-star-btn { border:none; background:transparent; font-size:34px; color:#d0d4da; cursor:pointer; line-height:1; padding:0 2px; }
+.rating-star-btn.active { color:#f39c12; }
 
 /* ============================================================
    ALERTS
