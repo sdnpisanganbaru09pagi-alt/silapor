@@ -2106,6 +2106,22 @@ function renderRatingStars(rating) {
   return '★'.repeat(safe) + '☆'.repeat(5 - safe);
 }
 
+let _ratingConfirmResolver = null;
+function showRatingConfirmModal(message) {
+  return new Promise((resolve) => {
+    const msgEl = document.getElementById('ratingConfirmMessage');
+    if (msgEl) msgEl.textContent = message;
+    _ratingConfirmResolver = resolve;
+    openModal('ratingConfirmModal');
+  });
+}
+
+window.closeRatingConfirm = function(result) {
+  closeModal('ratingConfirmModal');
+  if (_ratingConfirmResolver) _ratingConfirmResolver(!!result);
+  _ratingConfirmResolver = null;
+};
+
 function openRatingModal(ticketId) {
   activeRatingTicketId = ticketId;
   selectedRatingValue = 0;
