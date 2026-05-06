@@ -86,6 +86,8 @@ let captchaVerified = false;
 let resetTargetNPSN = '';
 let photoFiles = [];
 let followUpPhotoFiles = [];
+let activeRatingTicketId = '';
+let selectedRatingValue = 0;
 
 // ====================== SECURITY: Session Timeout ======================
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
@@ -1464,6 +1466,12 @@ function openTicket(id, isSchool) {
           ${completePhotos.map(p => `<img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openPhotoLightbox(this.src)">`).join('')}
         </div>
       </div>` : '';
+    const ratingSectionHTML = t.rating ? `
+      <div style="background:#fef9e7;border:1px solid #f9e79f;border-radius:10px;padding:12px;margin-top:12px">
+        <div style="font-size:12px;color:#7d6608;font-weight:700;margin-bottom:6px">Penilaian Pelapor</div>
+        <div style="font-size:18px;letter-spacing:1px;color:#f39c12">${renderRatingStars(t.rating)} <span style="font-size:13px;color:#7d6608;font-weight:600">(${t.rating}/5)</span></div>
+        ${t.ratingComment ? `<div style="font-size:13px;color:var(--text);margin-top:8px;line-height:1.5">"${escapeHTML(t.ratingComment)}"</div>` : '<div style="font-size:12px;color:var(--text-3);margin-top:6px">(Tanpa komentar)</div>'}
+      </div>` : '';
 
     document.getElementById('modalTicketId').textContent = 'Detail Laporan — ' + t.id;
     document.getElementById('modalTicketContent').innerHTML = `
@@ -1523,6 +1531,7 @@ function openTicket(id, isSchool) {
           <div style="line-height:1.6;font-size:13px;color:var(--text);word-break:break-word;overflow-wrap:anywhere">${completeNotes || '(Tidak ada catatan penyelesaian.)'}</div>
         </div>
         ${completePhotosHTML}
+        ${ratingSectionHTML}
       </div>
       ` : ''}
 
@@ -1784,6 +1793,7 @@ async function printTicketsPDF() {
       <td style="text-align:center">
         <span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${_statusBg(t.status)};color:${_statusColor(t.status)}">${_statusLabel(t.status)}</span>
       </td>
+      <td>${t.rating ? `${renderRatingStars(t.rating)} (${t.rating}/5)` : '-'}</td>
     </tr>
   `).join('');
 
@@ -1853,9 +1863,10 @@ async function printTicketsPDF() {
         <th>Topik</th>
         <th>Pelapor</th>
         <th style="text-align:center">Status</th>
+        <th>Rating</th>
       </tr>
     </thead>
-    <tbody>${rows || '<tr><td colspan="7" style="text-align:center;padding:20px;color:#888">Tidak ada data laporan</td></tr>'}</tbody>
+    <tbody>${rows || `<tr><td colspan="${currentUser.type === 'admin' ? 8 : 7}" style="text-align:center;padding:20px;color:#888">Tidak ada data laporan</td></tr>`}</tbody>
   </table>
 
   <div class="footer">
@@ -1920,6 +1931,11 @@ async function printSingleTicketPDF(id) {
       <div class="lbl">Tanggal Selesai</div>
       <div class="val">${tglSelesai}</div>
       ${completePhotosHTML}
+      <div class="inner" style="margin-top:10px">
+        <div class="lbl">Rating Pelapor</div>
+        <div class="val">${t.rating ? `${renderRatingStars(t.rating)} (${t.rating}/5)` : '-'}</div>
+        <div style="font-size:11px;color:#555;margin-top:4px">${t.ratingComment ? escapeHTML(t.ratingComment) : '(Tanpa komentar)'}</div>
+      </div>
     </div>` : '';
 
   const html = `<!DOCTYPE html>
@@ -2040,6 +2056,56 @@ function showAlert(elId, type, msg) {
   el.innerHTML = `<div class="alert alert-${type}"><div class="alert-icon">${type === 'success' ? SVGIcons.check : type === 'danger' ? SVGIcons.x : SVGIcons.info}</div><div>${msg}</div></div>`;
   const delay = type === 'success' ? 8000 : 12000;
   setTimeout(() => { el.innerHTML = ''; }, delay);
+}
+
+function escapeHTML(value) {
+  return String(value || '').replace(/[&<>"']/g, (m) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m]));
+}
+
+function renderRatingStars(rating) {
+  const safe = Math.max(0, Math.min(5, Number(rating) || 0));
+  return '★'.repeat(safe) + '☆'.repeat(5 - safe);
+}
+
+function openRatingModal(ticketId) {
+  activeRatingTicketId = ticketId;
+  selectedRatingValue = 0;
+  document.getElementById('ratingComment').value = '';
+  document.getElementById('ratingSubmitBtn').disabled = true;
+  document.querySelectorAll('.rating-star-btn').forEach(btn => btn.classList.remove('active'));
+  openModal('ratingModal');
+}
+
+function selectRating(value) {
+  selectedRatingValue = value;
+  document.querySelectorAll('.rating-star-btn').forEach(btn => {
+    const v = Number(btn.dataset.value || 0);
+    btn.classList.toggle('active', v <= value);
+  });
+  document.getElementById('ratingSubmitBtn').disabled = value < 1;
+}
+
+async function submitTicketRating() {
+  if (!activeRatingTicketId || selectedRatingValue < 1) return;
+  const comment = (document.getElementById('ratingComment').value || '').trim().slice(0, 500);
+  const payload = {
+    rating: selectedRatingValue,
+    ratingComment: comment,
+    ratingSubmittedAt: new Date().toISOString()
+  };
+  const DB = loadDB();
+  const t = DB.tickets.find(x => x.id === activeRatingTicketId);
+  if (t) Object.assign(t, payload);
+  if (window.fbUpdateTicket) await window.fbUpdateTicket(activeRatingTicketId, payload);
+  closeModal('ratingModal');
+  const el = document.getElementById('trackResult');
+  if (el) {
+    el.insertAdjacentHTML('afterbegin', `<div class="alert alert-success"><div class="alert-icon">${SVGIcons.check}</div><div>Terima kasih! Rating Anda berhasil dikirim.</div></div>`);
+  }
+  activeRatingTicketId = '';
+  await trackReport();
 }
 
 // ====================== FOLLOW-UP PHOTO UPLOAD ======================
@@ -2205,6 +2271,18 @@ async function trackReport() {
       </div>
       ${completePhotosHTML}
     </div>` : '';
+  const ratingHistoryBlock = t.rating ? `
+    <div style="background:#fef9e7;border:1px solid #f9e79f;border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;color:#7d6608;font-weight:700;margin-bottom:8px;text-transform:uppercase">Penilaian Pelapor</div>
+      <div style="font-size:22px;letter-spacing:2px;color:#f39c12">${renderRatingStars(t.rating)}</div>
+      <div style="font-size:12px;color:#7d6608;margin-top:3px">Rating: <strong>${t.rating}/5</strong></div>
+      ${t.ratingComment ? `<div style="margin-top:10px;font-size:13px;line-height:1.6;color:var(--text)">"${escapeHTML(t.ratingComment)}"</div>` : '<div style="margin-top:10px;font-size:12px;color:var(--text-3)">(Tanpa komentar)</div>'}
+    </div>` : '';
+  const ratingCTA = (t.status === 'Selesai' && !t.rating) ? `
+    <div style="background:#fff;border:1px solid #f9e79f;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600;color:#7d6608;margin-bottom:8px">Laporan sudah selesai. Berikan penilaian Anda untuk pihak sekolah.</div>
+      <button class="btn btn-sm" style="background:#f39c12;color:#fff;border:none" onclick="openRatingModal('${t.id}')">Beri Rating & Komentar</button>
+    </div>` : '';
 
   // Timeline blok waktu — hanya tampil jika status sudah melewati "Baru"
   const timelineHTML = (t.status === 'Dalam Proses' || t.status === 'Selesai') ? `
@@ -2280,6 +2358,8 @@ async function trackReport() {
       ${reportHistoryBlock}
       ${processHistoryBlock}
       ${completeHistoryBlock}
+      ${ratingCTA}
+      ${ratingHistoryBlock}
       ${t.status === 'Baru' ? '<div style="background:var(--warning-pale);border-radius:8px;padding:12px;border:1px solid #f9e79f;font-size:13px;color:var(--warning)">Laporan Anda sedang menunggu tindak lanjut dari pihak sekolah.</div>' : ''}
     </div>`;
 }
