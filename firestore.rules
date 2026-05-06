@@ -1,0 +1,188 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ============================================================
+    // CATATAN PENTING
+    // Aplikasi saat ini belum memakai Firebase Auth.
+    // Jadi rule di bawah fokus ke validasi skema + integritas data,
+    // bukan identitas user. Ini lebih aman daripada allow read,write: if true,
+    // tapi belum seaman model berbasis auth/role.
+    // ============================================================
+
+    function validString(value, min, max) {
+      return value is string && value.size() >= min && value.size() <= max;
+    }
+
+    function validOptionalString(value, max) {
+      return value == null || (value is string && value.size() <= max);
+    }
+
+    function hasField(data, field) {
+      return data.keys().hasAny([field]);
+    }
+
+    function validNpsn(value) {
+      return value is string && value.matches('^[0-9]{8}$');
+    }
+
+    function validSchoolLevel(value) {
+      return value in ['SD', 'SMP', 'SMA', 'SMK', 'SLB', 'Lainnya'];
+    }
+
+    function validTicketStatus(value) {
+      return value in ['Baru', 'Dalam Proses', 'Selesai'];
+    }
+
+    function validIsoDate(value) {
+      return value is string
+        && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]{8,16}Z$');
+    }
+
+    function validSchoolDoc() {
+      return request.resource.data.keys().hasOnly([
+        'id',
+        'name',
+        'level',
+        'city',
+        'passwordHash',
+        'firstLogin'
+      ])
+      && validNpsn(request.resource.data.id)
+      && validString(request.resource.data.name, 2, 120)
+      && validSchoolLevel(request.resource.data.level)
+      && validString(request.resource.data.city, 2, 80)
+      && validString(request.resource.data.passwordHash, 64, 128)
+      && request.resource.data.firstLogin is bool;
+    }
+
+    function validTicketDoc() {
+      return request.resource.data.keys().hasOnly([
+        'id',
+        'reporter',
+        'email',
+        'wa',
+        'schoolId',
+        'schoolName',
+        'topic',
+        'desc',
+        'photos',
+        'status',
+        'date',
+        'incidentDate',
+        'notes',
+        'followUpPhotos',
+        'processDate',
+        'completeDate',
+        'processNotes',
+        'completeNotes',
+        'processPhotos',
+        'completePhotos',
+        'rating',
+        'ratingComment',
+        'ratingSubmittedAt'
+      ])
+      && validString(request.resource.data.id, 6, 40)
+      && validString(request.resource.data.reporter, 3, 100)
+      && validOptionalString(request.resource.data.email, 120)
+      && validString(request.resource.data.wa, 8, 20)
+      && validNpsn(request.resource.data.schoolId)
+      && validString(request.resource.data.schoolName, 2, 120)
+      && validString(request.resource.data.topic, 3, 120)
+      && validString(request.resource.data.desc, 20, 3000)
+      && validTicketStatus(request.resource.data.status)
+      && validIsoDate(request.resource.data.date)
+      && (!hasField(request.resource.data, 'incidentDate') || validOptionalString(request.resource.data.incidentDate, 32))
+      && (!hasField(request.resource.data, 'notes') || validOptionalString(request.resource.data.notes, 3000))
+      && (!hasField(request.resource.data, 'processNotes') || validOptionalString(request.resource.data.processNotes, 3000))
+      && (!hasField(request.resource.data, 'completeNotes') || validOptionalString(request.resource.data.completeNotes, 3000))
+      && (!hasField(request.resource.data, 'processDate') || request.resource.data.processDate == null || validIsoDate(request.resource.data.processDate))
+      && (!hasField(request.resource.data, 'completeDate') || request.resource.data.completeDate == null || validIsoDate(request.resource.data.completeDate))
+      && (!hasField(request.resource.data, 'photos') || request.resource.data.photos.size() <= 5)
+      && (!hasField(request.resource.data, 'followUpPhotos') || request.resource.data.followUpPhotos.size() <= 5)
+      && (!hasField(request.resource.data, 'processPhotos') || request.resource.data.processPhotos.size() <= 5)
+      && (!hasField(request.resource.data, 'completePhotos') || request.resource.data.completePhotos.size() <= 5)
+      && (!hasField(request.resource.data, 'rating') || request.resource.data.rating == null || (request.resource.data.rating is int && request.resource.data.rating >= 1 && request.resource.data.rating <= 5))
+      && (!hasField(request.resource.data, 'ratingComment') || validOptionalString(request.resource.data.ratingComment, 500))
+      && (!hasField(request.resource.data, 'ratingSubmittedAt') || request.resource.data.ratingSubmittedAt == null || validIsoDate(request.resource.data.ratingSubmittedAt));
+    }
+
+    function validStatusTransition() {
+      return (
+        resource.data.status == 'Baru' && request.resource.data.status in ['Baru', 'Dalam Proses']
+      ) || (
+        resource.data.status == 'Dalam Proses' && request.resource.data.status in ['Dalam Proses', 'Selesai']
+      ) || (
+        resource.data.status == 'Selesai' && request.resource.data.status == 'Selesai'
+      );
+    }
+
+    function validRatingTransition() {
+      return !hasField(request.resource.data, 'rating')
+        || (
+          resource.data.status == 'Selesai'
+          && (!hasField(resource.data, 'rating') || resource.data.rating == null)
+          && request.resource.data.rating is int
+          && request.resource.data.rating >= 1
+          && request.resource.data.rating <= 5
+          && (
+            !hasField(request.resource.data, 'ratingSubmittedAt')
+            || validIsoDate(request.resource.data.ratingSubmittedAt)
+          )
+        );
+    }
+
+    match /schools/{schoolId} {
+      allow read: if true;
+
+      allow create: if validSchoolDoc()
+        && request.resource.data.id == schoolId;
+
+      allow update: if validSchoolDoc()
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          'name',
+          'level',
+          'city',
+          'passwordHash',
+          'firstLogin'
+        ]);
+
+      allow delete: if false;
+    }
+
+    match /tickets/{ticketId} {
+      allow read: if true;
+
+      allow create: if validTicketDoc()
+        && request.resource.data.id == ticketId
+        && request.resource.data.status == 'Baru'
+        && request.resource.data.processDate == null
+        && request.resource.data.completeDate == null
+        && (!hasField(request.resource.data, 'rating') || request.resource.data.rating == null);
+
+      allow update: if validTicketDoc()
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.schoolId == resource.data.schoolId
+        && request.resource.data.date == resource.data.date
+        && validStatusTransition()
+        && validRatingTransition();
+
+      allow delete: if false;
+    }
+
+    match /config/admin {
+      allow read: if true;
+
+      allow create, update: if request.resource.data.keys().hasOnly(['username', 'passwordHash'])
+        && validString(request.resource.data.username, 3, 40)
+        && validString(request.resource.data.passwordHash, 64, 128);
+
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

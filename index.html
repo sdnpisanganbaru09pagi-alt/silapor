@@ -971,6 +971,30 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="ratingModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">Rating Laporan Selesai</div>
+      <button class="modal-close" onclick="closeModal('ratingModal')">✕</button>
+    </div>
+    <div style="padding:4px 2px 0">
+      <div style="font-size:13px;color:var(--text-3);margin-bottom:10px">Berikan penilaian Anda terhadap penanganan laporan oleh pihak sekolah.</div>
+      <div class="rating-stars-wrap">
+        <button class="rating-star-btn" data-value="1" onclick="selectRating(1)" type="button">★</button>
+        <button class="rating-star-btn" data-value="2" onclick="selectRating(2)" type="button">★</button>
+        <button class="rating-star-btn" data-value="3" onclick="selectRating(3)" type="button">★</button>
+        <button class="rating-star-btn" data-value="4" onclick="selectRating(4)" type="button">★</button>
+        <button class="rating-star-btn" data-value="5" onclick="selectRating(5)" type="button">★</button>
+      </div>
+      <textarea id="ratingComment" maxlength="500" placeholder="Komentar Anda (opsional, maks. 500 karakter)" style="margin-top:10px;min-height:90px"></textarea>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+        <button class="btn btn-outline btn-sm" onclick="closeModal('ratingModal')">Nanti Saja</button>
+        <button class="btn btn-sm" id="ratingSubmitBtn" onclick="submitTicketRating()">Kirim Rating</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Input file tersembunyi (follow-up foto) -->
 <input type="file" id="photoInput" accept="image/*" multiple hidden>
 <input type="file" id="followUpPhotoInput" accept="image/*" multiple hidden onchange="handleFollowUpPhotos(this)">
