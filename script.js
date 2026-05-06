@@ -22,9 +22,9 @@ import {
 (function loadXLSX() {
   if (typeof XLSX === 'undefined') {
     const script = document.createElement('script');
-    script.src = '/js/xlsx.full.min.js';
+    script.src = 'https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js';
     script.onload = () => console.log('[OK] XLSX library loaded');
-    script.onerror = () => console.error('[ERROR] XLSX tidak ditemukan. Pastikan file ada di /js/xlsx.full.min.js');
+    script.onerror = () => console.error('[ERROR] Gagal memuat XLSX dari CDN. Periksa koneksi internet.');
     document.head.appendChild(script);
   }
 })();
