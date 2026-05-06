@@ -2122,22 +2122,83 @@ window.closeRatingConfirm = function(result) {
   _ratingConfirmResolver = null;
 };
 
+function resetRatingUI() {
+  selectedRatingValue = 0;
+  document.querySelectorAll('.rating-star-btn').forEach(btn => {
+    btn.classList.remove('active', 'just-selected', 'hovered');
+  });
+  const labelEl = document.getElementById('ratingLabel');
+  if (labelEl) {
+    labelEl.textContent = 'Pilih bintang di atas';
+    labelEl.style.color = 'var(--text-3)';
+  }
+  const submitBtn = document.getElementById('ratingSubmitBtn');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Kirim Rating'; }
+  const commentEl = document.getElementById('ratingComment');
+  if (commentEl) commentEl.value = '';
+}
+
+function initRatingHover() {
+  const wrap = document.querySelector('.rating-stars-wrap');
+  if (!wrap || wrap._hoverInited) return;
+  wrap._hoverInited = true;
+
+  const labels = ['', 'Sangat Buruk \u{1F61E}', 'Kurang Memuaskan \u{1F615}', 'Cukup \u{1F610}', 'Memuaskan \u{1F60A}', 'Sangat Memuaskan \u{1F31F}'];
+  const colors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e', '#16a34a'];
+
+  wrap.addEventListener('mousemove', (e) => {
+    const btn = e.target.closest('.rating-star-btn');
+    if (!btn) return;
+    const hoverVal = Number(btn.dataset.value || 0);
+    document.querySelectorAll('.rating-star-btn').forEach(b => {
+      b.classList.toggle('hovered', Number(b.dataset.value) <= hoverVal);
+    });
+    const labelEl = document.getElementById('ratingLabel');
+    if (labelEl && selectedRatingValue === 0) {
+      labelEl.textContent = labels[hoverVal] || '';
+      labelEl.style.color = colors[hoverVal] || 'var(--text-3)';
+    }
+  });
+
+  wrap.addEventListener('mouseleave', () => {
+    document.querySelectorAll('.rating-star-btn').forEach(b => b.classList.remove('hovered'));
+    const labelEl = document.getElementById('ratingLabel');
+    if (labelEl && selectedRatingValue === 0) {
+      labelEl.textContent = 'Pilih bintang di atas';
+      labelEl.style.color = 'var(--text-3)';
+    }
+  });
+}
+
 function openRatingModal(ticketId) {
   activeRatingTicketId = ticketId;
-  selectedRatingValue = 0;
-  document.getElementById('ratingComment').value = '';
-  document.getElementById('ratingSubmitBtn').disabled = true;
-  document.getElementById('ratingSubmitBtn').textContent = 'Kirim Rating';
-  document.querySelectorAll('.rating-star-btn').forEach(btn => btn.classList.remove('active'));
+  resetRatingUI();
   openModal('ratingModal');
+  initRatingHover();
 }
 
 function selectRating(value) {
   selectedRatingValue = value;
+  const labels = ['', 'Sangat Buruk 😞', 'Kurang Memuaskan 😕', 'Cukup 😐', 'Memuaskan 😊', 'Sangat Memuaskan 🌟'];
+  const colors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e', '#16a34a'];
+
   document.querySelectorAll('.rating-star-btn').forEach(btn => {
     const v = Number(btn.dataset.value || 0);
     btn.classList.toggle('active', v <= value);
+    btn.classList.remove('just-selected');
+    if (v === value) {
+      // trigger reflow for animation restart
+      void btn.offsetWidth;
+      btn.classList.add('just-selected');
+    }
   });
+
+  const labelEl = document.getElementById('ratingLabel');
+  if (labelEl) {
+    labelEl.textContent = labels[value] || '';
+    labelEl.style.color = colors[value] || 'var(--text-3)';
+  }
+
   document.getElementById('ratingSubmitBtn').disabled = value < 1;
   ratingConfirmArmed = false;
   document.getElementById('ratingSubmitBtn').textContent = 'Kirim Rating';
@@ -2146,9 +2207,8 @@ function selectRating(value) {
 async function submitTicketRating() {
   if (!activeRatingTicketId || selectedRatingValue < 1) return;
   const comment = (document.getElementById('ratingComment').value || '').trim().slice(0, 500);
-  const commentPreview = comment ? `
-Komentar: "${comment}"` : '';
-  const ok = window.confirm(`Kirim rating ${selectedRatingValue}/5 sekarang?${commentPreview}`);
+  const commentPreview = comment ? `\nKomentar: "${comment}"` : '';
+  const ok = await showRatingConfirmModal(`Kirim rating ${selectedRatingValue}/5 sekarang?${commentPreview}`);
   if (!ok) return;
 
   const payload = {

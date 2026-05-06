@@ -1121,9 +1121,66 @@ tr:hover td { background: #fafbfe }
 }
 
 .modal-close:hover { background: var(--neutral) }
-.rating-stars-wrap { display:flex; gap:6px; margin:8px 0 4px; }
-.rating-star-btn { border:none; background:transparent; font-size:34px; color:#d0d4da; cursor:pointer; line-height:1; padding:0 2px; }
-.rating-star-btn.active { color:#f39c12; }
+.rating-stars-wrap {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0 2px;
+  justify-content: center;
+}
+.rating-star-btn {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+  line-height: 1;
+  border-radius: 8px;
+  outline: none;
+}
+.rating-star-btn svg {
+  width: 44px;
+  height: 44px;
+  display: block;
+  fill: #dde1e8;
+  transition: fill 0.18s ease, filter 0.18s ease, transform 0.18s cubic-bezier(.34,1.56,.64,1);
+  filter: drop-shadow(0 0 0px transparent);
+}
+.rating-star-btn:not(.active):hover svg,
+.rating-star-btn:focus-visible svg {
+  fill: #fbbf24;
+  transform: scale(1.2);
+  filter: drop-shadow(0 2px 6px rgba(251,191,36,0.45));
+}
+.rating-star-btn.hovered svg {
+  fill: #fde68a;
+  filter: drop-shadow(0 2px 5px rgba(251,191,36,0.35));
+  transform: scale(1.12);
+}
+.rating-star-btn.active svg {
+  fill: #f59e0b;
+  filter: drop-shadow(0 2px 8px rgba(245,158,11,0.55));
+}
+.rating-star-btn.active:hover svg {
+  transform: scale(1.15);
+}
+@keyframes starPop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.rating-star-btn.just-selected svg {
+  animation: starPop 0.28s cubic-bezier(.34,1.56,.64,1);
+}
+.rating-label {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-3);
+  min-height: 20px;
+  margin-top: 8px;
+  letter-spacing: 0.01em;
+  transition: color 0.2s;
+}
 
 /* ============================================================
    ALERTS
