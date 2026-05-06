@@ -2073,7 +2073,7 @@ function openRatingModal(ticketId) {
   activeRatingTicketId = ticketId;
   selectedRatingValue = 0;
   document.getElementById('ratingComment').value = '';
-  document.getElementById('ratingSubmitBtn').disabled = false;
+  document.getElementById('ratingSubmitBtn').disabled = true;
   document.querySelectorAll('.rating-star-btn').forEach(btn => btn.classList.remove('active'));
   openModal('ratingModal');
 }
@@ -2084,14 +2084,11 @@ function selectRating(value) {
     const v = Number(btn.dataset.value || 0);
     btn.classList.toggle('active', v <= value);
   });
+  document.getElementById('ratingSubmitBtn').disabled = value < 1;
 }
 
 async function submitTicketRating() {
-  if (!activeRatingTicketId) return;
-  if (selectedRatingValue < 1) {
-    alert('Silakan pilih minimal 1 bintang sebelum mengirim rating.');
-    return;
-  }
+  if (!activeRatingTicketId || selectedRatingValue < 1) return;
   const comment = (document.getElementById('ratingComment').value || '').trim().slice(0, 500);
   const payload = {
     rating: selectedRatingValue,
