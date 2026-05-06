@@ -66,6 +66,9 @@ function showDBError() {
   if (el) el.classList.remove('hidden');
 }
 
+window.showLoadingOverlay = showLoadingOverlay;
+window.showDBError = showDBError;
+
 function loadDB() { return window.DB; }
 
 function normalizeSchoolId(value) {
