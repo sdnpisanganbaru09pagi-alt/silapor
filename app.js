@@ -440,11 +440,8 @@ function showPage(page) {
   updateSidebarActive(page);
 
   // Bersihkan input tracking saat user meninggalkan halaman lacak tiket
-  if (previousActivePage === 'tracking' && page !== 'tracking') {
-    const trackInput = document.getElementById('trackInput');
-    const trackResult = document.getElementById('trackResult');
-    if (trackInput) trackInput.value = '';
-    if (trackResult) trackResult.innerHTML = '';
+  if (page === 'tracking') {
+    resetTracking();
   }
 
   if (page !== 'reporter') {
@@ -2072,10 +2069,23 @@ function handleFollowUpPhotos(inp) {
 }
 
 // ====================== TRACKING ======================
+function _setLupaTiketBtnVisible(visible) {
+  const wrap = document.getElementById('lupaTiketBtnWrap');
+  if (wrap) wrap.style.display = visible ? '' : 'none';
+}
+
+function resetTracking() {
+  const trackInput = document.getElementById('trackInput');
+  const trackResult = document.getElementById('trackResult');
+  if (trackInput) trackInput.value = '';
+  if (trackResult) trackResult.innerHTML = '';
+  _setLupaTiketBtnVisible(true);
+}
+
 async function trackReport() {
   const id = document.getElementById('trackInput').value.trim().toUpperCase();
   const el = document.getElementById('trackResult');
-  if (!id) { el.innerHTML = '<div class="alert alert-warning"><div class="alert-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div>Masukkan nomor tiket terlebih dahulu.</div></div>'; return; }
+  if (!id) { el.innerHTML = '<div class="alert alert-warning"><div class="alert-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div>Masukkan nomor tiket terlebih dahulu.</div></div>'; _setLupaTiketBtnVisible(true); return; }
   el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-3)">Mencari laporan...</div>';
 
   let t = null;
@@ -2085,7 +2095,8 @@ async function trackReport() {
     const cached = DB.tickets.find(x => x.id === id);
     if (cached) t = { ...cached, photos: [], followUpPhotos: [] };
   }
-  if (!t) { el.innerHTML = `<div class="alert alert-danger"><div class="alert-icon">${SVGIcons.x}</div><div>Nomor tiket <strong>${id}</strong> tidak ditemukan.</div></div>`; return; }
+  if (!t) { el.innerHTML = `<div class="alert alert-danger"><div class="alert-icon">${SVGIcons.x}</div><div>Nomor tiket <strong>${id}</strong> tidak ditemukan.</div></div>`; _setLupaTiketBtnVisible(true); return; }
+  _setLupaTiketBtnVisible(false);
 
   const fmtDateTime = iso => iso ? new Date(iso).toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null;
   const date        = fmtDateTime(t.date);
@@ -2255,7 +2266,7 @@ async function trackReport() {
           <div style="font-size:11px;color:var(--text-3)">Nomor Tiket</div>
           <div style="font-size:18px;font-weight:700;color:var(--primary);font-family:'Sora',sans-serif">${t.id}</div>
         </div>
-        <span class="badge ${statusClass}" style="font-size:13px;padding:6px 14px">${statusIcon} ${t.status}</span>
+        <span class="badge ${statusClass}" style="font-size:13px;padding:6px 14px">${t.status}</span>
       </div>
       <div class="steps" style="margin-bottom:12px">
         ${steps.map(s => `
@@ -2421,7 +2432,6 @@ function closeLupaTiket() {
 function resetLupaTiket() {
   ltCaptchaVerified = false;
   document.getElementById('lt_wa').value = '';
-  document.getElementById('lt_email').value = '';
   document.getElementById('lt_schoolSearch').value = '';
   document.getElementById('lt_school_id').value = '';
   document.getElementById('lt_school_name').value = '';
@@ -2535,7 +2545,7 @@ async function submitLupaTiket() {
   alertEl.innerHTML = '';
 
   const wa = document.getElementById('lt_wa').value.trim();
-  const email = document.getElementById('lt_email').value.trim().toLowerCase();
+  const email = '';
   const schoolId = document.getElementById('lt_school_id').value.trim();
   const schoolName = document.getElementById('lt_school_name').value.trim();
 
@@ -2658,7 +2668,11 @@ async function submitLupaTiket() {
 
 function closeLupaTiketAndTrack(ticketId) {
   closeLupaTiket();
+  // Aktifkan halaman tracking tanpa reset, lalu isi input dan lacak
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-tracking').classList.add('active');
+  updateSidebarActive('tracking');
   document.getElementById('trackInput').value = ticketId;
-  showPage('tracking');
+  _setLupaTiketBtnVisible(false);
   setTimeout(() => trackReport(), 100);
 }

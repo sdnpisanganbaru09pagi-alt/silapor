@@ -986,6 +986,18 @@ tr:hover td { background: #fafbfe }
   display: flex;
 }
 
+#lupaTiketBtnWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
 .login-wrap {
   max-width: 420px;
   width: 100%;
