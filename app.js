@@ -2130,12 +2130,10 @@ function selectRating(value) {
 async function submitTicketRating() {
   if (!activeRatingTicketId || selectedRatingValue < 1) return;
   const comment = (document.getElementById('ratingComment').value || '').trim().slice(0, 500);
-  if (!ratingConfirmArmed) {
-    ratingConfirmArmed = true;
-    document.getElementById('ratingSubmitBtn').textContent = 'Ya, Kirim Rating';
-    showToast('Konfirmasi rating: klik "Ya, Kirim Rating" untuk melanjutkan.', 'info', 2800);
-    return;
-  }
+  const commentPreview = comment ? `
+Komentar: "${comment}"` : '';
+  const ok = window.confirm(`Kirim rating ${selectedRatingValue}/5 sekarang?${commentPreview}`);
+  if (!ok) return;
 
   const payload = {
     rating: selectedRatingValue,
