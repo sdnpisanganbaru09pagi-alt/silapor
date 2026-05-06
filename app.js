@@ -2126,6 +2126,11 @@ function selectRating(value) {
 async function submitTicketRating() {
   if (!activeRatingTicketId || selectedRatingValue < 1) return;
   const comment = (document.getElementById('ratingComment').value || '').trim().slice(0, 500);
+  const commentPreview = comment ? `
+Komentar: "${comment}"` : '';
+  const ok = await showCustomConfirm(`Kirim rating ${selectedRatingValue}/5 sekarang?${commentPreview}`, 'Konfirmasi Rating');
+  if (!ok) return;
+
   const payload = {
     rating: selectedRatingValue,
     ratingComment: comment,
