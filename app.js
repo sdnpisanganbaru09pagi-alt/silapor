@@ -1505,10 +1505,13 @@ function openTicket(id, isSchool) {
         </div>
       </div>` : '';
     const ratingSectionHTML = t.rating ? `
-      <div style="background:#fef9e7;border:1px solid #f9e79f;border-radius:10px;padding:12px;margin-top:12px">
-        <div style="font-size:12px;color:#7d6608;font-weight:700;margin-bottom:6px">Penilaian Pelapor</div>
+      <div style="background:#fef9e7;border:2px solid #f9e79f;border-radius:12px;padding:16px;margin-bottom:16px">
+        <div style="font-size:12px;color:#7d6608;font-weight:700;margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;gap:5px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b7950b" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg>
+          Penilaian Pelapor
+        </div>
         <div style="font-size:18px;letter-spacing:1px;color:#f39c12">${renderRatingStars(t.rating)} <span style="font-size:13px;color:#7d6608;font-weight:600">(${t.rating}/5)</span></div>
-        ${t.ratingComment ? `<div style="font-size:13px;color:var(--text);margin-top:8px;line-height:1.5">"${escapeHTML(t.ratingComment)}"</div>` : '<div style="font-size:12px;color:var(--text-3);margin-top:6px">(Tanpa komentar)</div>'}
+        ${t.ratingComment ? `<div style="font-size:13px;color:var(--text);margin-top:8px;line-height:1.5;background:#fff;border-radius:8px;padding:10px;border:1px solid #f9e79f">"${escapeHTML(t.ratingComment)}"</div>` : '<div style="font-size:12px;color:var(--text-3);margin-top:6px">(Tanpa komentar)</div>'}
       </div>` : '';
 
     document.getElementById('modalTicketId').textContent = 'Detail Laporan — ' + t.id;
@@ -1569,8 +1572,9 @@ function openTicket(id, isSchool) {
           <div style="line-height:1.6;font-size:13px;color:var(--text);word-break:break-word;overflow-wrap:anywhere">${completeNotes || '(Tidak ada catatan penyelesaian.)'}</div>
         </div>
         ${completePhotosHTML}
-        ${ratingSectionHTML}
       </div>
+      <!-- BAGIAN 4: PENILAIAN PELAPOR (KUNING) — terpisah dari blok selesai -->
+      ${ratingSectionHTML}
       ` : ''}
 
       ${isSchool && t.status !== 'Selesai' ? `
@@ -1954,24 +1958,31 @@ async function printSingleTicketPDF(id) {
 
   const prosesBlock = (t.status === 'Dalam Proses' || t.status === 'Selesai') ? `
     <div class="block orange">
-      <div class="block-title" style="color:#f57c00;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f57c00" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 0l4.24-4.24M1 12h6m6 0h6m-17.78 7.78l4.24-4.24m5.08 0l4.24 4.24"/></svg> Dalam Proses</div>
-      <div class="row-2col">
+      <div class="block-title" style="color:#a04000;display:flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a04000" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 0l4.24-4.24M1 12h6m6 0h6m-17.78 7.78l4.24-4.24m5.08 0l4.24 4.24"/></svg> Dalam Proses</div>
+      <div class="row-2col" style="margin-bottom:${processPhotos && processPhotos.length ? '6px' : '0'}">
         <div><div class="lbl">Tanggal Diproses</div><div class="val">${tglProses}</div></div>
-        <div><div class="lbl">Catatan Tindak Lanjut</div><div class="val">${processNotes || '(Belum ada catatan)'}</div></div>
+        <div><div class="lbl">Catatan Tindak Lanjut</div><div class="val" style="font-weight:400">${processNotes || '(Belum ada catatan)'}</div></div>
       </div>
       ${processPhotosHTML}
     </div>` : '';
 
+  const completeNotes2 = resolveTicketProgressData(t).completeNotes;
   const selesaiBlock = t.status === 'Selesai' ? `
     <div class="block green">
       <div class="block-title" style="color:#2e7d32;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Selesai</div>
-      <div class="lbl">Tanggal Selesai</div>
-      <div class="val">${tglSelesai}</div>
+      <div class="row-2col" style="margin-bottom:6px">
+        <div><div class="lbl">Tanggal Selesai</div><div class="val">${tglSelesai}</div></div>
+        <div><div class="lbl">Catatan Penyelesaian</div><div class="val">${completeNotes2 || '(Tidak ada catatan)'}</div></div>
+      </div>
       ${completePhotosHTML}
-      <div class="inner" style="margin-top:10px">
-        <div class="lbl">Rating Pelapor</div>
-        <div class="val">${t.rating ? `${renderRatingStars(t.rating)} (${t.rating}/5)` : '-'}</div>
-        <div style="font-size:11px;color:#555;margin-top:4px">${t.ratingComment ? escapeHTML(t.ratingComment) : '(Tanpa komentar)'}</div>
+    </div>` : '';
+
+  const ratingBlock = t.rating ? `
+    <div class="block yellow">
+      <div class="block-title" style="color:#7d6608;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b7950b" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg> Penilaian Pelapor</div>
+      <div class="row-2col" style="margin-bottom:0">
+        <div><div class="lbl">Rating</div><div class="val">${renderRatingStars(t.rating)} <span style="font-size:11px;color:#7d6608">(${t.rating}/5)</span></div></div>
+        <div><div class="lbl">Komentar</div><div class="val" style="font-weight:400">${t.ratingComment ? escapeHTML(t.ratingComment) : '(Tanpa komentar)'}</div></div>
       </div>
     </div>` : '';
 
@@ -1982,38 +1993,46 @@ async function printSingleTicketPDF(id) {
   <title>Detail Laporan ${t.id}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; font-size:12px; color:#222; background:#fff; padding:24px 32px; }
-    .header { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #1a73e8; padding-bottom:12px; margin-bottom:16px; }
-    .header-left .app-name { font-size:22px; font-weight:800; color:#1a73e8; }
-    .header-left .app-sub { font-size:11px; color:#555; margin-top:2px; }
-    .header-right { text-align:right; font-size:11px; color:#555; }
-    .ticket-id { font-size:18px; font-weight:800; color:#1a73e8; font-family:monospace; margin-bottom:4px; }
-    .status-badge { display:inline-block; padding:3px 14px; border-radius:20px; font-size:12px; font-weight:700; background:${_statusBg(t.status)}; color:${_statusColor(t.status)}; margin-bottom:14px; }
-    .block { border-radius:10px; padding:14px 16px; margin-bottom:14px; }
-    .block.blue { background:#e8f0fe; border:2px solid #1a73e8; }
-    .block.orange { background:#fff3e0; border:2px solid #ffb74d; }
-    .block.green { background:#e8f5e9; border:2px solid #81c784; }
-    .block-title { font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:10px; }
-    .row-2col { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
-    .row-4col { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; margin-bottom:10px; }
-    .inner { background:#fff; border-radius:6px; padding:10px; }
-    .lbl { font-size:10px; color:#777; margin-bottom:3px; }
-    .val { font-size:12px; font-weight:600; line-height:1.5; }
-    .section-label { font-size:11px; font-weight:700; margin-bottom:6px; margin-top:8px; color:#555; }
-    .photo-grid { display:flex; gap:8px; margin-bottom:8px; }
-    .photo { width:100px; height:100px; object-fit:cover; border-radius:6px; border:1px solid #ddd; }
-    .footer { margin-top:20px; border-top:1px solid #ddd; padding-top:10px; font-size:10px; color:#777; display:flex; justify-content:space-between; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size:11px; color:#222; background:#fff; padding:16px 20px; }
+    .header { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #1a5276; padding-bottom:8px; margin-bottom:10px; }
+    .header-left { display:flex; align-items:center; gap:8px; }
+    .header-left .app-name { font-size:17px; font-weight:800; color:#1a5276; }
+    .header-left .app-sub { font-size:10px; color:#666; }
+    .header-right { text-align:right; font-size:10px; color:#666; line-height:1.5; }
+    .ticket-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .ticket-id { font-size:15px; font-weight:800; color:#1a5276; font-family:monospace; }
+    .status-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:10px; font-weight:700; background:${_statusBg(t.status)}; color:${_statusColor(t.status)}; }
+    .block { border-radius:7px; padding:9px 11px; margin-bottom:8px; page-break-inside:avoid; }
+    .block.blue   { background:#eaf3fb; border:1.5px solid #1a5276; }
+    .block.orange { background:#fff8f0; border:1.5px solid #e67e22; }
+    .block.green  { background:#eafaf1; border:1.5px solid #1e8449; }
+    .block.yellow { background:#fef9e7; border:1.5px solid #b7950b; }
+    .block-title { font-size:10px; font-weight:800; text-transform:uppercase; margin-bottom:7px; letter-spacing:0.3px; }
+    .row-2col { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:7px; }
+    .row-3col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:7px; }
+    .inner { background:#fff; border-radius:5px; padding:7px 9px; }
+    .lbl { font-size:9.5px; color:#777; margin-bottom:2px; }
+    .val { font-size:11px; font-weight:600; line-height:1.45; }
+    .section-label { font-size:10px; font-weight:700; margin:6px 0 4px; color:#555; display:flex; align-items:center; gap:3px; }
+    .photo-grid { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+    .photo { width:80px; height:80px; object-fit:cover; border-radius:5px; border:1px solid #ddd; }
+    .divider { border:none; border-top:1px solid #e0e0e0; margin:6px 0; }
+    .footer { margin-top:10px; border-top:1px solid #ddd; padding-top:7px; font-size:9.5px; color:#888; display:flex; justify-content:space-between; }
     @media print {
-      body { padding:12px 18px; }
-      @page { margin:1cm; size:A4 portrait; }
+      body { padding:0; }
+      @page { margin:1.2cm 1.5cm; size:A4 portrait; }
+      .block { page-break-inside:avoid; }
     }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="header-left">
-      <div class="app-name"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> SiLapor</div>
-      <div class="app-sub">Sistem Laporan Sekolah</div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a5276" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div>
+        <div class="app-name">SiLapor</div>
+        <div class="app-sub">Sistem Laporan Sekolah</div>
+      </div>
     </div>
     <div class="header-right">
       <div>Dicetak: ${now}</div>
@@ -2021,36 +2040,39 @@ async function printSingleTicketPDF(id) {
     </div>
   </div>
 
-  <div class="ticket-id">${t.id}</div>
-  <span class="status-badge">${_statusLabel(t.status)}</span>
+  <div class="ticket-row">
+    <div class="ticket-id">${t.id}</div>
+    <span class="status-badge">${_statusLabel(t.status)}</span>
+  </div>
 
   <div class="block blue">
-    <div class="block-title" style="color:#1a73e8;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg> Laporan Awal — Dilaporkan: ${tglLapor}</div>
-    <div class="inner" style="margin-bottom:10px">
-      <div class="lbl">Topik</div>
-      <div class="val">${t.topic}</div>
-    </div>
-    <div class="inner" style="margin-bottom:10px">
-      <div class="lbl">Deskripsi</div>
-      <div class="val" style="font-weight:400;line-height:1.7">${t.desc}</div>
-    </div>
-    <div class="row-2col">
+    <div class="block-title" style="color:#1a5276;display:flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1a5276" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg> Laporan Awal — Dilaporkan: ${tglLapor}</div>
+    <div class="row-3col" style="margin-bottom:7px">
+      <div class="inner">
+        <div class="lbl">Topik</div>
+        <div class="val">${t.topic}</div>
+      </div>
       <div class="inner">
         <div class="lbl">Pelapor</div>
         <div class="val">${t.reporter}</div>
-        <div style="font-size:11px;color:#777;margin-top:2px">${t.wa || ''}</div>
+        <div style="font-size:9.5px;color:#777;margin-top:1px">${t.wa || ''}</div>
       </div>
       <div class="inner">
         <div class="lbl">Sekolah</div>
         <div class="val">${t.schoolName}</div>
-        <div style="font-size:11px;color:#777;margin-top:2px">NPSN: ${t.schoolId}</div>
+        <div style="font-size:9.5px;color:#777;margin-top:1px">NPSN: ${t.schoolId}</div>
       </div>
+    </div>
+    <div class="inner" style="margin-bottom:7px">
+      <div class="lbl">Deskripsi</div>
+      <div class="val" style="font-weight:400;line-height:1.55">${t.desc}</div>
     </div>
     ${photosHTML}
   </div>
 
   ${prosesBlock}
   ${selesaiBlock}
+  ${ratingBlock}
 
   <div class="footer">
     <span>© 2026 SiLapor — Penata Kelola Sistem dan Teknologi Informasi, Suku Dinas Pendidikan Jakarta Timur I</span>
