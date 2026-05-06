@@ -2073,7 +2073,7 @@ function openRatingModal(ticketId) {
   activeRatingTicketId = ticketId;
   selectedRatingValue = 0;
   document.getElementById('ratingComment').value = '';
-  document.getElementById('ratingSubmitBtn').disabled = false;
+  document.getElementById('ratingSubmitBtn').disabled = true;
   document.querySelectorAll('.rating-star-btn').forEach(btn => btn.classList.remove('active'));
   openModal('ratingModal');
 }
@@ -2084,51 +2084,28 @@ function selectRating(value) {
     const v = Number(btn.dataset.value || 0);
     btn.classList.toggle('active', v <= value);
   });
+  document.getElementById('ratingSubmitBtn').disabled = value < 1;
 }
 
 async function submitTicketRating() {
-  if (!activeRatingTicketId) return;
-  if (selectedRatingValue < 1) {
-    alert('Silakan pilih minimal 1 bintang sebelum mengirim rating.');
-    return;
-  }
+  if (!activeRatingTicketId || selectedRatingValue < 1) return;
   const comment = (document.getElementById('ratingComment').value || '').trim().slice(0, 500);
   const payload = {
     rating: selectedRatingValue,
     ratingComment: comment,
     ratingSubmittedAt: new Date().toISOString()
   };
-  const submitBtn = document.getElementById('ratingSubmitBtn');
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Mengirim...';
+  const DB = loadDB();
+  const t = DB.tickets.find(x => x.id === activeRatingTicketId);
+  if (t) Object.assign(t, payload);
+  if (window.fbUpdateTicket) await window.fbUpdateTicket(activeRatingTicketId, payload);
+  closeModal('ratingModal');
+  const el = document.getElementById('trackResult');
+  if (el) {
+    el.insertAdjacentHTML('afterbegin', `<div class="alert alert-success"><div class="alert-icon">${SVGIcons.check}</div><div>Terima kasih! Rating Anda berhasil dikirim.</div></div>`);
   }
-
-  try {
-    const DB = loadDB();
-    const t = DB.tickets.find(x => x.id === activeRatingTicketId);
-    if (t) Object.assign(t, payload);
-    if (window.fbUpdateTicket) await window.fbUpdateTicket(activeRatingTicketId, payload);
-
-    closeModal('ratingModal');
-    const el = document.getElementById('trackResult');
-    if (el) {
-      el.insertAdjacentHTML('afterbegin', `<div class="alert alert-success"><div class="alert-icon">${SVGIcons.check}</div><div>Terima kasih! Rating Anda berhasil dikirim.</div></div>`);
-    }
-    activeRatingTicketId = '';
-    await trackReport();
-  } catch (err) {
-    console.error('submitTicketRating error:', err);
-    const isPermissionError = err && (err.code === 'permission-denied' || String(err.message || '').toLowerCase().includes('insufficient permissions'));
-    alert(isPermissionError
-      ? 'Gagal mengirim rating: akun Anda tidak memiliki izin menulis ke Firebase. Mohon admin memperbarui Firestore Rules untuk field rating.'
-      : 'Terjadi kesalahan saat mengirim rating. Silakan coba lagi.');
-  } finally {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Kirim Rating';
-    }
-  }
+  activeRatingTicketId = '';
+  await trackReport();
 }
 
 // ====================== FOLLOW-UP PHOTO UPLOAD ======================
