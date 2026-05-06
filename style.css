@@ -1121,65 +1121,57 @@ tr:hover td { background: #fafbfe }
 }
 
 .modal-close:hover { background: var(--neutral) }
+.rating-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 8px 0 6px;
+}
 .rating-stars-wrap {
   display: flex;
-  gap: 8px;
-  margin: 4px 0 2px;
-  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 .rating-star-btn {
   border: none;
   background: transparent;
-  padding: 4px;
+  padding: 2px;
   cursor: pointer;
-  transition: transform 0.15s ease, filter 0.15s ease;
   line-height: 1;
-  border-radius: 8px;
+  border-radius: 4px;
   outline: none;
 }
 .rating-star-btn svg {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: block;
   fill: #dde1e8;
-  transition: fill 0.18s ease, filter 0.18s ease, transform 0.18s cubic-bezier(.34,1.56,.64,1);
-  filter: drop-shadow(0 0 0px transparent);
-}
-.rating-star-btn:not(.active):hover svg,
-.rating-star-btn:focus-visible svg {
-  fill: #fbbf24;
-  transform: scale(1.2);
-  filter: drop-shadow(0 2px 6px rgba(251,191,36,0.45));
+  transition: fill 0.15s ease;
 }
 .rating-star-btn.hovered svg {
-  fill: #fde68a;
-  filter: drop-shadow(0 2px 5px rgba(251,191,36,0.35));
-  transform: scale(1.12);
+  fill: #f59e0b;
 }
 .rating-star-btn.active svg {
   fill: #f59e0b;
-  filter: drop-shadow(0 2px 8px rgba(245,158,11,0.55));
 }
-.rating-star-btn.active:hover svg {
-  transform: scale(1.15);
+.rating-star-btn:not(.active):not(.hovered):hover svg {
+  fill: #fbbf24;
 }
-@keyframes starPop {
-  0%   { transform: scale(1); }
-  45%  { transform: scale(1.35); }
-  100% { transform: scale(1); }
+#ratingSubmitBtn:not(:disabled) {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
 }
-.rating-star-btn.just-selected svg {
-  animation: starPop 0.28s cubic-bezier(.34,1.56,.64,1);
+#ratingSubmitBtn:not(:disabled):hover {
+  background: var(--primary-light);
+  border-color: var(--primary-light);
 }
 .rating-label {
-  text-align: center;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
-  color: var(--text-3);
-  min-height: 20px;
-  margin-top: 8px;
-  letter-spacing: 0.01em;
-  transition: color 0.2s;
+  color: var(--text-2);
+  min-width: 120px;
+  transition: color 0.15s;
 }
 
 /* ============================================================

@@ -2129,7 +2129,7 @@ function resetRatingUI() {
   });
   const labelEl = document.getElementById('ratingLabel');
   if (labelEl) {
-    labelEl.textContent = 'Pilih bintang di atas';
+    labelEl.textContent = '';
     labelEl.style.color = 'var(--text-3)';
   }
   const submitBtn = document.getElementById('ratingSubmitBtn');
@@ -2143,7 +2143,7 @@ function initRatingHover() {
   if (!wrap || wrap._hoverInited) return;
   wrap._hoverInited = true;
 
-  const labels = ['', 'Sangat Buruk \u{1F61E}', 'Kurang Memuaskan \u{1F615}', 'Cukup \u{1F610}', 'Memuaskan \u{1F60A}', 'Sangat Memuaskan \u{1F31F}'];
+  const labels = ['', 'Sangat Buruk', 'Kurang Memuaskan', 'Cukup', 'Memuaskan', 'Sangat Memuaskan'];
   const colors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e', '#16a34a'];
 
   wrap.addEventListener('mousemove', (e) => {
@@ -2164,7 +2164,7 @@ function initRatingHover() {
     document.querySelectorAll('.rating-star-btn').forEach(b => b.classList.remove('hovered'));
     const labelEl = document.getElementById('ratingLabel');
     if (labelEl && selectedRatingValue === 0) {
-      labelEl.textContent = 'Pilih bintang di atas';
+      labelEl.textContent = '';
       labelEl.style.color = 'var(--text-3)';
     }
   });
@@ -2179,18 +2179,13 @@ function openRatingModal(ticketId) {
 
 function selectRating(value) {
   selectedRatingValue = value;
-  const labels = ['', 'Sangat Buruk 😞', 'Kurang Memuaskan 😕', 'Cukup 😐', 'Memuaskan 😊', 'Sangat Memuaskan 🌟'];
-  const colors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e', '#16a34a'];
+  const labels = ['', 'Sangat Buruk', 'Kurang Memuaskan', 'Cukup', 'Memuaskan', 'Sangat Memuaskan'];
+  const colors = ['', '#ef4444', '#f97316', '#ca8a04', '#16a34a', '#15803d'];
 
   document.querySelectorAll('.rating-star-btn').forEach(btn => {
     const v = Number(btn.dataset.value || 0);
     btn.classList.toggle('active', v <= value);
-    btn.classList.remove('just-selected');
-    if (v === value) {
-      // trigger reflow for animation restart
-      void btn.offsetWidth;
-      btn.classList.add('just-selected');
-    }
+
   });
 
   const labelEl = document.getElementById('ratingLabel');
@@ -2221,13 +2216,10 @@ async function submitTicketRating() {
   if (t) Object.assign(t, payload);
   if (window.fbUpdateTicket) await window.fbUpdateTicket(activeRatingTicketId, payload);
   closeModal('ratingModal');
-  const el = document.getElementById('trackResult');
-  if (el) {
-    el.insertAdjacentHTML('afterbegin', `<div class="alert alert-success"><div class="alert-icon">${SVGIcons.check}</div><div>Terima kasih! Rating Anda berhasil dikirim.</div></div>`);
-  }
   activeRatingTicketId = '';
   ratingConfirmArmed = false;
   await trackReport();
+  openModal('ratingThanksModal');
 }
 
 // ====================== FOLLOW-UP PHOTO UPLOAD ======================
@@ -2285,6 +2277,12 @@ async function trackReport() {
   }
   if (!t) { el.innerHTML = `<div class="alert alert-danger"><div class="alert-icon">${SVGIcons.x}</div><div>Nomor tiket <strong>${id}</strong> tidak ditemukan.</div></div>`; _setLupaTiketBtnVisible(true); return; }
   _setLupaTiketBtnVisible(false);
+
+  // Tampilkan prompt rating jika laporan sudah Selesai tapi belum diberi rating
+  if (t.status === 'Selesai' && !t.rating) {
+    window._pendingRatingTicketId = t.id;
+    setTimeout(() => openModal('ratingPromptModal'), 400);
+  }
 
   const fmtDateTime = iso => iso ? new Date(iso).toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null;
   const date        = fmtDateTime(t.date);

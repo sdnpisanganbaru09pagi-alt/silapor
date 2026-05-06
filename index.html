@@ -971,6 +971,45 @@
   </div>
 </div>
 
+<!-- Modal: Notifikasi laporan selesai belum rating -->
+<div class="modal-overlay" id="ratingPromptModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title">Laporan Telah Ditindaklanjuti</div>
+      <button class="modal-close" onclick="closeModal('ratingPromptModal')">✕</button>
+    </div>
+    <div style="padding:8px 2px 4px">
+      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:20px">
+        <div style="flex-shrink:0;width:44px;height:44px;border-radius:50%;background:var(--success-pale);display:flex;align-items:center;justify-content:center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:6px">Laporan Anda telah selesai ditangani oleh pihak sekolah.</div>
+          <div style="font-size:13px;color:var(--text-3);line-height:1.6">Kami mengundang Anda untuk memberikan penilaian dan komentar terhadap penanganan laporan ini. Masukan Anda sangat berarti bagi peningkatan layanan.</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="closeModal('ratingPromptModal')">Nanti Saja</button>
+        <button class="btn btn-sm" id="ratingPromptBtn" onclick="closeModal('ratingPromptModal');openRatingModal(window._pendingRatingTicketId)" style="background:var(--primary);color:#fff;border-color:var(--primary)">Beri Penilaian</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Terima kasih setelah submit rating -->
+<div class="modal-overlay" id="ratingThanksModal">
+  <div class="modal" style="max-width:400px;text-align:center">
+    <div style="padding:32px 24px 28px">
+      <div style="width:52px;height:52px;border-radius:50%;background:var(--success-pale);display:flex;align-items:center;justify-content:center;margin:0 auto 18px">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:10px">Terima Kasih atas Penilaian Anda</div>
+      <div style="font-size:13px;color:var(--text-3);line-height:1.7;margin-bottom:24px">Penilaian Anda telah berhasil dikirim. Masukan Anda sangat membantu dalam meningkatkan kualitas penanganan laporan ke depannya.</div>
+      <button class="btn btn-sm" onclick="closeModal('ratingThanksModal')" style="background:var(--primary);color:#fff;border-color:var(--primary);min-width:100px">Tutup</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="ratingModal">
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
@@ -980,24 +1019,26 @@
     <div style="padding:4px 2px 0">
       <div style="font-size:13px;color:var(--text-3);margin-bottom:18px">Berikan penilaian Anda terhadap penanganan laporan oleh pihak sekolah.</div>
 
-      <div class="rating-stars-wrap">
-        <button class="rating-star-btn" data-value="1" onclick="selectRating(1)" type="button" aria-label="1 bintang">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg>
-        </button>
-        <button class="rating-star-btn" data-value="2" onclick="selectRating(2)" type="button" aria-label="2 bintang">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg>
-        </button>
-        <button class="rating-star-btn" data-value="3" onclick="selectRating(3)" type="button" aria-label="3 bintang">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg>
-        </button>
-        <button class="rating-star-btn" data-value="4" onclick="selectRating(4)" type="button" aria-label="4 bintang">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg>
-        </button>
-        <button class="rating-star-btn" data-value="5" onclick="selectRating(5)" type="button" aria-label="5 bintang">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg>
-        </button>
+      <div class="rating-row">
+        <div class="rating-stars-wrap">
+          <button class="rating-star-btn" data-value="1" onclick="selectRating(1)" type="button" aria-label="1 bintang">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg>
+          </button>
+          <button class="rating-star-btn" data-value="2" onclick="selectRating(2)" type="button" aria-label="2 bintang">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg>
+          </button>
+          <button class="rating-star-btn" data-value="3" onclick="selectRating(3)" type="button" aria-label="3 bintang">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg>
+          </button>
+          <button class="rating-star-btn" data-value="4" onclick="selectRating(4)" type="button" aria-label="4 bintang">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg>
+          </button>
+          <button class="rating-star-btn" data-value="5" onclick="selectRating(5)" type="button" aria-label="5 bintang">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg>
+          </button>
+        </div>
+        <div class="rating-label" id="ratingLabel"></div>
       </div>
-      <div class="rating-label" id="ratingLabel">Pilih bintang di atas</div>
 
       <textarea id="ratingComment" maxlength="500" placeholder="Komentar Anda (opsional, maks. 500 karakter)" style="margin-top:14px;min-height:90px"></textarea>
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
