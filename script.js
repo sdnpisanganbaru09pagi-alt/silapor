@@ -233,25 +233,52 @@ window.fbLoadTicketsPage = async function ({ context = 'admin', schoolId = null,
 window.fbStartRealtimeForContext = function ({ context = 'public', schoolId = null } = {}) {
   stopRealtimeListeners();
 
-  _schoolsUnsub = onSnapshot(collection(db, 'schools'), (snap) => {
-    if (!window.DB) return;
-    window.DB.schools = snap.empty ? [] : snap.docs.map(d => d.data());
-  });
+  // Hanya subscribe schools saat dibutuhkan (bukan public)
+  if (context !== 'public') {
+    _schoolsUnsub = onSnapshot(collection(db, 'schools'), (snap) => {
+      if (!window.DB) return;
+      window.DB.schools = snap.empty ? [] : snap.docs.map(d => d.data());
+    });
+  }
 
   if (context === 'public') return;
 
-  const q = context === 'school'
-    ? buildTicketsQuery({ context: 'admin', pageSize: TICKET_PAGE_SIZE })
-    : buildTicketsQuery({ context, schoolId, pageSize: TICKET_PAGE_SIZE });
+  // FIX: school context harus pakai query school, bukan admin
+  const q = context === 'school' && schoolId
+    ? buildTicketsQuery({ context: 'school', schoolId, pageSize: TICKET_PAGE_SIZE })
+    : buildTicketsQuery({ context: 'admin', pageSize: TICKET_PAGE_SIZE });
+
+  let isFirstSnapshot = true;
+
   _ticketsUnsub = onSnapshot(q, (snap) => {
     if (!window.DB) return;
 
+    if (isFirstSnapshot) {
+      // Snapshot pertama: isi langsung sebagai initial load (menggantikan getDocs terpisah)
+      isFirstSnapshot = false;
+      const rows = snap.empty ? [] : snap.docs.map(d => stripPhotos(d.data()));
+      if (context === 'school' && schoolId) {
+        window.DB.tickets = rows;
+      } else {
+        window.DB.tickets = rows;
+      }
+      if (window.DBMeta && window.DBMeta.tickets) {
+        window.DBMeta.tickets.context = context;
+        window.DBMeta.tickets.schoolId = schoolId;
+        window.DBMeta.tickets.lastVisible = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null;
+        window.DBMeta.tickets.hasMore = snap.docs.length === TICKET_PAGE_SIZE;
+        window.DBMeta.tickets.isLoading = false;
+      }
+      runTicketRenderHooks();
+      return;
+    }
+
+    // Update inkremental untuk perubahan berikutnya
     snap.docChanges().forEach(change => {
       const ticketLite = stripPhotos(change.doc.data());
       if (change.type === 'removed') {
         window.DB.tickets = window.DB.tickets.filter(t => t.id !== ticketLite.id);
       } else {
-        if (context === 'school' && !isTicketForSchool(ticketLite, schoolId)) return;
         upsertTicketToCache(ticketLite);
       }
     });

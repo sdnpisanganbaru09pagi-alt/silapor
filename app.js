@@ -242,7 +242,7 @@ function applySchoolState(school) {
   renderSchoolTickets();
   updateSchoolStats();
   showPage('school-dash');
-  if (window.fbLoadTicketsPage) window.fbLoadTicketsPage({ context: 'school', schoolId: school.id, reset: true });
+  // fbLoadTicketsPage dihapus: onSnapshot sudah mengisi data pada snapshot pertama.
   if (window.fbStartRealtimeForContext) window.fbStartRealtimeForContext({ context: 'school', schoolId: school.id });
 }
 
@@ -268,7 +268,8 @@ function applyAdminState() {
   showPage('admin-dash');
   updateAdminStats();
   renderAdminRecent();
-  if (window.fbLoadTicketsPage) window.fbLoadTicketsPage({ context: 'admin', reset: true });
+  // fbLoadTicketsPage dihapus: onSnapshot di fbStartRealtimeForContext sudah
+  // mengisi DB.tickets pada snapshot pertama, sehingga tidak perlu getDocs ganda.
   if (window.fbStartRealtimeForContext) window.fbStartRealtimeForContext({ context: 'admin' });
 }
 
